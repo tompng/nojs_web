@@ -67,7 +67,8 @@ get '/countdown' do
             background:white;
             font-size:16px;
             border-radius:8px;
-            border:2px solid gray
+            border:2px solid gray;
+            cursor:pointer;
           }
           input[type=image], #tick, #outer, .time{position:fixed;left:15;top:15px;width:240px;height:240px;}
           #outer{border:4px solid gray;border-radius:50%;box-sizing:border-box;}

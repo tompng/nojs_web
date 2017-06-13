@@ -25,7 +25,7 @@ class Channel
     @queue << cmd
   end
 
-  def deq timeout: 10
+  def deq timeout: 1
     Timeout.timeout(timeout) { @queue.deq } rescue nil
   end
 

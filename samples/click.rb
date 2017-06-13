@@ -12,7 +12,10 @@ get '/click1' do
       id = 1
       loop do
         btn = ch.deq
-        next unless btn
+        unless btn
+          out.write "\n"
+          next
+        end
         btn[:data]
         out.puts "<div id='d#{id}'>#{btn[:data]} at #{Time.now.strftime '%H:%M:%S'}</div>"
         out.puts "<style>#d#{id-1}{display:none}</style>"

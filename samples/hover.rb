@@ -1,81 +1,76 @@
-
-q=Queue.new
-
-get '/action_hover' do
-  x = params['x'].to_i
-  y = params['y'].to_i
-  q << [x, y, 'hover']
-end
-get '/action_click' do
-  x = params['coord.x'].to_i
-  y = params['coord.y'].to_i
-  q << [x, y, 'click']
-end
-
-cellsize=10
-cellnum=30
-hovers = ->{
-  cellnum.times.map{|i|
-    cellnum.times.map{|j|
-      "<input type=image class='hover' id='hover_#{i}_#{j}' style='left:#{i*cellsize};top:#{j*cellsize};'>"
-    }
-  }.join
-}
-
 get '/hover' do
   stream do |out|
+    channel = Channel.new
+    out.write '<style>'
+    out.write %(
+      iframe{display:none}
+      input[type=image]{
+        position:absolute;left:0;top:0;width:100%;height:100%;opacity:0;
+      }
+      form{position:relative;height:256px;}
+      .cell{
+        position:absolute;width:32px;height:32px;
+        box-shadow: 0 0 1px gray;
+        background:silver;
+      }
+    )
+    colors=8.times.map{8.times.map{false}}
+    out.write 8.times.to_a.repeated_permutation(2).map{|i,j|
+      %(
+        #h_#{i}_#{j} input:hover{
+          background-image:url(#{channel.path}?type=hover&i=#{i}&j=#{j}&r=#{rand})
+        }
+      )
+    }.join
+    out.write '</style>'
+    out.write %(
+      <iframe name=a></iframe>
+      <form target=a action=#{channel.path}>
+    )
+    out.write 8.times.to_a.repeated_permutation(2).map{|i,j|
+      %(
+        <div class=cell id='h_#{i}_#{j}' style='left:#{i*32};top:#{j*32};'>
+          <input type=image name='h' value='#{i}/#{j}'>
+        </div>
+      )
+    }.join
+    out.write '</form>'
+    prev = nil
     id = 0
-    message = ->message{
-      out.write "<style>.message#msg#{id}{display:none}</style>"
-      id += 1
-      out.write %(<div class=message id='msg#{id}'>#{message}</div>)
-      out.flush
-    }
-    xymessage = ->x,y{
-      out.write "<style>.message#msg#{id}{display:none}</style>"
-      id += 1
-      out.write %(<div class=message id='msg#{id}'>
-        <svg width=300 height=300 viewBox="0 0 300 300">>
-          <rect x="#{x}" y="#{y}" fill="#ffff00" stroke="#ff0000" width="10" height="10"/>
-          <text x="10" y="20">your mouse is at #{x} #{y}</text>
-        </svg>
-      </div>)
-      out.flush
-    }
-    hoverstyle = ->x,y{
-      "#hover_#{x}_#{y}:hover{background-image:url('/action_hover?x=#{x}&y=#{y}&r=#{rand}');}\n"
-    }
-    hoverinitialstyle = ->{
-      "<style>"+cellnum.times.flat_map{|x|cellnum.times.map{|y|hoverstyle.call x, y}}.join+"</style>"
-    }
-    hovermessage = ->x,y{
-      out.write "<style>#{hoverstyle.call x, y}.hover{display:block}</style>"
-    }
-    iframe = "<iframe name=a></iframe>"
-    style = %(<style>
-      body{user-select: none;}
-      iframe{position:fixed;width:1;height:1;left:-5;top:-5;border:none;}
-      .canvas{border:1px solid red;}
-      .canvas,input{position:fixed;left:0;top:0;width:300;height:300;}
-      input{opacity:0.01;z-index:10000;}
-      .message{position:fixed;left:0;top:0;}
-      .hover{position:fixed;width:#{cellsize};height:#{cellsize};z-index:10000;box-shadow:0 0 1px red;}
-    </style>)
-    canvas = "<div class=canvas></div><form action='/action_click' target=a><input type=image name=coord></form>"
-    canvas=hovers.call
-    out.write "#{iframe}#{style}#{hoverinitialstyle.call}#{canvas}"
-    out.flush
-    message.call 'click anywhere'
-    prev=nil
-    loop do
-      break if out.closed?
-      xy = Timeout.timeout(1){q.deq} rescue nil
-      if xy
-        x, y = xy
-        hovermessage.call *prev if prev
-        prev=x,y
-        xymessage.call x*cellsize, y*cellsize
+    mode = true
+    loop{
+      cmd = channel.deq
+      unless cmd
+        out.write "\n"
+        next
       end
-    end
+      if cmd[:h]
+        i, j = cmd[:h].split('/').map &:to_i
+        out.write %(<p id=p#{id}>click at #{32*i+cmd['h.x'].to_i} #{32*j+cmd['h.y'].to_i}</p>)
+        mode = !colors[i][j]
+        colors[i][j] = mode
+        out.write %(<style>
+          #h_#{i}_#{j}{background:#{colors[i][j] ? 'black' : 'white'};}
+        </style>)
+        id+=1
+      elsif cmd[:type]=='hover'
+        i, j = [cmd[:i], cmd[:j]].map &:to_i
+        colors[i][j] = mode
+        out.write '<style>'
+        if prev && prev != [i, j]
+          out.write %(
+            #h_#{prev.join '_'} input:hover{background-image:url(#{channel.path}?type=hover&i=#{prev[0]}&j=#{prev[1]}&r=#{rand})}
+          )
+        end
+        out.write %(
+          #h_#{i}_#{j}{background:#{colors[i][j] ? 'black' : 'white'};}
+        )
+        out.write '</style>'
+        prev = [i, j]
+        out.write %(<p id=p#{id}>hover on #{i} #{j}</p>)
+        id+=1
+      end
+      out.write %(<style>#p#{id-6}{display:none}</style>)
+    }
   end
 end

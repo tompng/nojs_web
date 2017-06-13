@@ -1,4 +1,4 @@
-get '/click_sample' do
+get '/click1' do
   stream do |out|
     begin
       ch = Channel.new
@@ -20,6 +20,35 @@ get '/click_sample' do
       end
     ensure
       ch.close
+    end
+  end
+end
+
+get '/click2' do
+  stream do |out|
+    begin
+      channel = Channel.new
+      out.write %(
+        <style>iframe{display:none}input[type=image]{width:500px;height:200px;border:1px solid red}</style>
+        <iframe name=a></iframe>
+        <div class=canvas></div><form action='#{channel.path}' target=a><input type=image name=coord></form>
+      )
+      id = 1
+      loop do
+         coord = channel.deq timeout: 10
+         unless coord
+           out.write "\n"
+           next
+         end
+         out.write %(
+           <p id='p#{id}'>(#{coord['coord.x']}, #{coord['coord.y']})</p>
+           <style>#p#{id-1}{display:none}</style>
+         )
+         id+=1
+      end
+    ensure
+      p :closed
+      channel.close
     end
   end
 end

@@ -10,6 +10,9 @@ body{margin: 0;padding: 0;}
   margin: 0 auto;
   border: 4px solid gray;
 }
+.tools-wrapper{
+  position:absolute;left:0;top:0;width:100%;
+}
 .tools{
   position: relative;
   width: 512px;
@@ -98,8 +101,8 @@ form.stamp-picker input{
 }
 </style>
 <iframe style='display:none' name=a></iframe>
-<div class=tools>
-  <form target=a method=post action={{action_path}}>
+<div class=tools-wrapper>
+  <form class=tools target=a method=post action={{action_path}}>
     <input type=hidden name=type value=tool>
     <input class=tool id='eraser' type=submit name=tool value=eraser>
     <input class=tool id='curve' type=submit name=tool value=curve>

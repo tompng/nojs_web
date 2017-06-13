@@ -99,7 +99,7 @@ form.stamp-picker input{
 </style>
 <iframe style='display:none' name=a></iframe>
 <div class=tools>
-  <form target=a action={{action_path}}>
+  <form target=a method=post action={{action_path}}>
     <input type=hidden name=type value=tool>
     <input class=tool id='eraser' type=submit name=tool value=eraser>
     <input class=tool id='curve' type=submit name=tool value=curve>
@@ -109,7 +109,7 @@ form.stamp-picker input{
 </div>
 <div class=canvas-wrapper>
   <div class=canvas>
-    <form target=a action={{action_path}}>
+    <form target=a method=post action={{action_path}}>
       <input type=hidden name=type value=canvas>
       <input type=image>
     </form>
@@ -117,14 +117,14 @@ form.stamp-picker input{
 </div>
 <div class=modal id=color_modal>
   <div class=backdrop>
-    <form target=a action={{action_path}}>
+    <form target=a method=post action={{action_path}}>
       <input type=hidden name=type value=close>
       <input type=hidden name=target value=color>
       <input type=image>
     </form>
   </div>
   <div class=modal-body>
-    <form target=a class=color-picker action={{action_path}}>
+    <form target=a method=post action={{action_path}} class=color-picker>
       <input type=hidden name=type value=color>
       <div>
         <input type=submit name=color value=#f00 style='background-color:#f00'>
@@ -146,14 +146,14 @@ form.stamp-picker input{
 </div>
 <div class=modal id=stamp_modal>
   <div class=backdrop>
-    <form target=a action={{action_path}}>
+    <form target=a method=post action={{action_path}}>
       <input type=hidden name=type value=close>
       <input type=hidden name=target value=stamp>
       <input type=image>
     </form>
   </div>
   <div class=modal-body>
-    <form class=stamp-picker target=a action={{action_path}}>
+    <form target=a method=post action={{action_path}} class=stamp-picker>
       <input type=hidden name=type value=stamp>
       <div>
         <input type=submit name=stamp value=0 style='background-image:url(stamp0.svg)'>

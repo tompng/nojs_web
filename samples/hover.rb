@@ -25,7 +25,7 @@ get '/hover' do
     out.write '</style>'
     out.write %(
       <iframe name=a></iframe>
-      <form target=a action=#{channel.path}>
+      <form target=a method=post action=#{channel.path}>
     )
     out.write 8.times.to_a.repeated_permutation(2).map{|i,j|
       %(

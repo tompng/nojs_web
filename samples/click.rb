@@ -5,9 +5,9 @@ get '/click1' do
       out.puts %(
         <title>countdown watch</title>
         <iframe name=a style='display:none'></iframe>
-        <form action='#{ch.path}' target=a><input name=data type=submit value='buttonA'></form>
-        <form action='#{ch.path}' target=a><input name=data type=submit value='buttonB'></form>
-        <form action='#{ch.path}' target=a><input name=data type=submit value='buttonC'></form>
+        <form action='#{ch.path}' method=post target=a><input name=data type=submit value='buttonA'></form>
+        <form action='#{ch.path}' method=post target=a><input name=data type=submit value='buttonB'></form>
+        <form action='#{ch.path}' method=post target=a><input name=data type=submit value='buttonC'></form>
       )
       id = 1
       loop do
@@ -31,7 +31,7 @@ get '/click2' do
       out.write %(
         <style>iframe{display:none}input[type=image]{width:500px;height:200px;border:1px solid red}</style>
         <iframe name=a></iframe>
-        <div class=canvas></div><form action='#{channel.path}' target=a><input type=image name=coord></form>
+        <div class=canvas></div><form action='#{channel.path}' method=post target=a><input type=image name=coord></form>
       )
       id = 1
       loop do
@@ -95,7 +95,7 @@ get '/countdown' do
         </style>
         <div id=outer></div>
         <div id=tick></div>
-        <form action='#{ch.path}' target=a><input type=image name=coord></form>
+        <form action='#{ch.path}' method=post target=a><input type=image name=coord></form>
       )
       count = 10
       count_at = Time.now

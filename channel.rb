@@ -41,3 +41,7 @@ end
 get '/trigger/:id' do
   Channel.trigger params[:id], params
 end
+
+post '/trigger/:id' do
+  Channel.trigger params[:id], params
+end

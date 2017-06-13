@@ -107,7 +107,10 @@ get '/countdown' do
       send = ->{
         cnt = remaining.call
         next_state = [cnt, paused]
-        return if state == next_state
+        if state == next_state
+          out.write "\n"
+          return
+        end
         state = next_state
         paused = false if cnt == 0
         out.puts %(

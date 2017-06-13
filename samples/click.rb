@@ -69,10 +69,24 @@ get '/countdown' do
             border-radius:8px;
             border:2px solid gray
           }
-          #tick, #outer, .time{position:fixed;left:15;top:60px;width:240px;height:240px;}
+          input[type=image], #tick, #outer, .time{position:fixed;left:15;top:15px;width:240px;height:240px;}
           #outer{border:4px solid gray;border-radius:50%;box-sizing:border-box;}
           .time{font-size:60px;text-align:center;line-height:240px;margin:0;font-weight:bold;}
-          #tick{transition:0.1s ease-out transform;}
+          .time.paused{font-size:50px;line-height:210px;}
+          .time.paused:after{
+            content:'click to start';
+            position:absolute;
+            left:0;top:40px;width:240px;height:200px;text-align:center;
+            line-height:200px;
+            font-size:16px;
+            color:gray;
+          }
+          #tick{transition:0.2s ease-out transform;}
+          input[type=image]{
+            left:0;top:0px;width:270px;height:270px;border:none;
+            opacity:0;
+            z-index:100;
+          }
           #tick:before{
             content: '';
             position:absolute;left:118px;top:-8px;width:4px;height:20px;background:gray;
@@ -80,28 +94,50 @@ get '/countdown' do
         </style>
         <div id=outer></div>
         <div id=tick></div>
+        <form action='#{ch.path}' target=a><input type=image name=coord></form>
       )
-      [10,20,30].each do |time|
-        out.puts %(<form action='#{ch.path}' target=a><input name=data type=submit value='#{time}'></form>)
-      end
-      count = 0
+      count = 10
       count_at = Time.now
       id = 1
-      last_remaining = nil
+      state = nil
+      paused = true
+      remaining = ->{
+        paused ? count : [count + (count_at - Time.now).round, 0].max
+      }
       send = ->{
-        remaining = [count + (count_at - Time.now).round, 0].max
-        return if last_remaining == remaining
-        last_remaining = remaining
-        out.puts "<div class=time id='d#{id}'>#{"%02d"%remaining}</div>"
-        out.puts "<style>#d#{id-1}{display:none}\n#tick{transform: rotate(#{360*remaining/60}deg)}</style>"
+        cnt = remaining.call
+        next_state = [cnt, paused]
+        return if state == next_state
+        state = next_state
+        paused = false if cnt == 0
+        out.puts %(
+          <div class='time#{' paused' if paused}' id='d#{id}'>
+            #{"%02d"%cnt}
+          </div>
+          <style>
+            #d#{id-1}{display:none}\n#tick{transform: rotate(#{360*cnt/60}deg)}
+          </style>
+        )
         id += 1
       }
       Thread.new{
         until ch.closed?
           cmd = ch.deq
           next unless cmd
-          count = cmd[:data].to_i
-          count_at = Time.now
+          dx, dy = %w(coord.x coord.y).map { |key| cmd[key].to_i - 270 / 2 }
+          if dx*dx+dy*dy < 80*80
+            if paused
+              paused = false
+              count_at = Time.now
+            else
+              count = remaining.call
+              paused = true
+            end
+          else
+            count = (Math.atan2(dx, -dy)*60/(2*Math::PI)).round
+            count += 60 if count < 0
+            paused = true
+          end
           send.call
         end
       }

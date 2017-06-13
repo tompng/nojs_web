@@ -1,5 +1,5 @@
 require 'sinatra'
-require 'sinatra/streaming' # gem sinatra-contrib
+require 'sinatra/streaming'
 require 'pry'
 require './channel'
 require './samples/sleep'

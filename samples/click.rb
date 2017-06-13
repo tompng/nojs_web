@@ -81,7 +81,7 @@ get '/countdown' do
             font-size:16px;
             color:gray;
           }
-          #tick{transition:0.2s ease-out transform;}
+          #tick{transition:0.1s ease-out transform;}
           input[type=image]{
             left:0;top:0px;width:270px;height:270px;border:none;
             opacity:0;

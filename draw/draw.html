@@ -1,0 +1,177 @@
+<style>
+body{margin: 0;padding: 0;}
+.canvas-wrapper, .objects-wrapper{
+  position:absolute;left:0;top:72px;width:100%;
+}
+.canvas, #objects{
+  position: relative;
+  width: 512px;
+  height: 512px;
+  margin: 0 auto;
+  border: 4px solid gray;
+}
+.tools{
+  position: relative;
+  width: 512px;
+  height: 80px;
+  margin: 0 auto;
+}
+.tool{
+  display: block;
+  position: absolute;
+  top: 4px;
+  width: 80px;
+  height: 64px;
+  border-radius: 4px;
+  border: 2px solid silver;
+  box-sizing: border-box;
+  background-color: white;
+  font-size:24px;
+  line-height:60px;
+  outline: none;
+  cursor:pointer;
+  text-shadow: 0 0 2px white,0 0 2px white,0 0 2px white,0 0 2px white
+}
+.tool:hover{background-color:#eee;}
+.tool:active{background-color:#ddd;}
+.tool#eraser{left: 8px;}
+.tool#curve{left: 98px}
+.tool#stamp{left: 188px}
+.tool#color{right: 8px;}
+#color{background:black;}
+#curve{border-color:black;}
+input[type=image]{
+  position:absolute;left:0;top:0;width:100%;height:100%;
+  opacity:0;z-index:1000000;
+}
+.modal{
+  position:fixed;left:0;top:0;width:100%;height:100%;
+  z-index:1000001;
+  display: none;
+  justify-content: center;
+  align-items: center;
+}
+.modal{display: none;}
+.modal .backdrop{
+  position:absolute;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,0.5);
+}
+.modal .modal-body{
+  position:relative;
+  z-index:1000002;
+  border-radius: 4px;
+  border:2px;
+  min-width: 256px;
+  min-height: 128px;
+  background:white;
+}
+form.color-picker{
+  width: 320px;
+  padding: 40px 0;
+  text-align: center;
+  font-size: 0;
+}
+form.color-picker input{
+  width: 80px;
+  height: 80px;
+  border: none;
+  outline: none;
+  color: transparent;
+  cursor: pointer;
+}
+form.stamp-picker{
+  width: 480px;
+  padding: 40px 0;
+  text-align: center;
+  font-size: 0;
+}
+form.stamp-picker input{
+  width: 80px;
+  height: 80px;
+  margin: 8px;
+  border: none;
+  border-radius: 4px;
+  border: 2px solid silver;
+  outline: none;
+  color: transparent;
+  cursor: pointer;
+  background-color: white;
+}
+</style>
+<iframe style='display:none' name=a></iframe>
+<div class=tools>
+  <form target=a action={{action_path}}>
+    <input type=hidden name=type value=tool>
+    <input class=tool id='eraser' type=submit name=tool value=eraser>
+    <input class=tool id='curve' type=submit name=tool value=curve>
+    <input class=tool id='stamp' type=submit name=tool value=stamp>
+    <input class=tool id='color' type=submit name=tool value=color>
+  </form>
+</div>
+<div class=canvas-wrapper>
+  <div class=canvas>
+    <form target=a action={{action_path}}>
+      <input type=hidden name=type value=canvas>
+      <input type=image>
+    </form>
+  </div>
+</div>
+<div class=modal id=color_modal>
+  <div class=backdrop>
+    <form target=a action={{action_path}}>
+      <input type=hidden name=type value=close>
+      <input type=hidden name=target value=color>
+      <input type=image>
+    </form>
+  </div>
+  <div class=modal-body>
+    <form target=a class=color-picker action={{action_path}}>
+      <input type=hidden name=type value=color>
+      <div>
+        <input type=submit name=color value=#f00 style='background-color:#f00'>
+        <input type=submit name=color value=#0f0 style='background-color:#0f0'>
+        <input type=submit name=color value=#00f style='background-color:#00f'>
+      </div>
+      <div>
+        <input type=submit name=color value=#f0f style='background-color:#f0f'>
+        <input type=submit name=color value=#ff0 style='background-color:#ff0'>
+        <input type=submit name=color value=#0ff style='background-color:#0ff'>
+      </div>
+      <div>
+        <input type=submit name=color value=#000 style='background-color:#000'>
+        <input type=submit name=color value=#888 style='background-color:#888'>
+        <input type=submit name=color value=#ccc style='background-color:#ccc'>
+      </div>
+    </form>
+  </div>
+</div>
+<div class=modal id=stamp_modal>
+  <div class=backdrop>
+    <form target=a action={{action_path}}>
+      <input type=hidden name=type value=close>
+      <input type=hidden name=target value=stamp>
+      <input type=image>
+    </form>
+  </div>
+  <div class=modal-body>
+    <form class=stamp-picker target=a action={{action_path}}>
+      <input type=hidden name=type value=stamp>
+      <div>
+        <input type=submit name=stamp value=0 style='background-image:url(stamp0.svg)'>
+        <input type=submit name=stamp value=1 style='background-image:url(stamp1.svg)'>
+        <input type=submit name=stamp value=2 style='background-image:url(stamp2.svg)'>
+        <input type=submit name=stamp value=3 style='background-image:url(stamp3.svg)'>
+      </div>
+      <div>
+        <input type=submit name=stamp value=4 style='background-image:url(stamp4.svg)'>
+        <input type=submit name=stamp value=5 style='background-image:url(stamp5.svg)'>
+        <input type=submit name=stamp value=6 style='background-image:url(stamp6.svg)'>
+        <input type=submit name=stamp value=7 style='background-image:url(stamp7.svg)'>
+      </div>
+    </form>
+  </div>
+</div>
+<div class=objects-wrapper>
+  <div id=objects>
+    <div style='position:absolute;left:1px;top:1px;width:5px;height:5px;background:red'></div>
+  </div>
+</div>

@@ -1,3 +1,4 @@
+require_relative './canvas'
 template = File.read "#{File.dirname(__FILE__)}/draw.html"
 
 get '/draw' do
@@ -9,7 +10,14 @@ get '/draw' do
         exp = pattern[2...-2]
         eval exp
       end
+
+      a,b,c,d = 4.times.map{
+        Point.new rand(100..400), rand(100..400)
+      }
+      bez = Bezier.new a,b,c,d, line_width: 4, color: :blue
+
       out.write html
+      out.write bez.to_svg
       tool = 'curve'
       stamp = 0
       color = '#000'
@@ -54,8 +62,9 @@ get '/draw' do
           out.write "<style>##{cmd[:target]}_modal{display:none}</style>"
         end
       end
-    rescue
+    rescue => e
       channel.close
+      raise e
     end
 
   end

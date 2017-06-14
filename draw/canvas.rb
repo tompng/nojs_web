@@ -15,7 +15,7 @@ end
 class Bezier
   attr_accessor :a, :b, :c, :d
   attr_accessor :min, :max
-  def initialize a, b, c, d, line_width: 2, color: 'black'
+  def initialize a, b, c, d, line_width: 4, color: 'black'
     @a, @b, @c, @d = a, b, c, d
     @color = color
     @line_width = line_width

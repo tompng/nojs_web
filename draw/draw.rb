@@ -21,6 +21,7 @@ get '/draw' do
       tool = 'curve'
       stamp = 0
       color = '#000'
+      strokes = []
       loop do
         cmd = channel.deq
         p cmd
@@ -32,6 +33,7 @@ get '/draw' do
         when 'tool'
           case cmd[:tool]
           when 'eraser'
+            strokes = []
             out.write "<style>##{tool}{border-color:silver}</style>"
             out.write "<style>#eraser{border-color:black}</style>"
             tool = 'eraser'
@@ -42,6 +44,7 @@ get '/draw' do
           when 'color'
             out.write "<style>#color_modal{display:flex}</style>"
           when 'stamp'
+            strokes = []
             if tool == 'stamp'
               out.write "<style>#stamp_modal{display:flex}</style>"
             else
@@ -51,6 +54,14 @@ get '/draw' do
             end
           end
         when 'canvas'
+          if tool == 'curve'
+            x, y = cmd[:x].to_i, cmd[:y].to_i
+            strokes << Point.new(x, y)
+            if strokes.length >= 2
+              bez = Bezier.new strokes[-2], strokes[-2], strokes[-1], strokes[-1], color: color
+              out.write bez.to_svg
+            end
+          end
         when 'color'
           color = cmd[:color]
           out.write "<style>#color{background:#{cmd[:color]}}</style>"

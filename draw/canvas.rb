@@ -1,9 +1,50 @@
+require 'set'
 class Canvas
+  def initialize
+    @id_max = 0
+    @z_max = 0
+    @objects = {}
+    @listeners = Set.new
+    @mutex = Mutex.new
+  end
 
+  def listen block
+    @mutex.synchronize do
+      block.call :initial, @objects.dup
+      @listeners << block
+    end
+  end
 
+  def unlisten block
+    @mutex.synchronize do
+      @listeners.delete block
+    end
+  end
+
+  def broadcast type, data
+    @mutex.synchronize do
+      @listeners.each do |l|
+        l.call type, data
+      end
+    end
+  end
+
+  def add bezier, z: nil
+    @mutex.synchronize do
+      z ||= @z += 1
+      id = @id += 1
+      @objects[id] = [z, bezier]
+      broadcast :add, [id, z, bezier]
+    end
+  end
+
+  def remove id
+    @mutex.synchronize do
+      @objects.delete id
+      broadcast :remove, id
+    end
+  end
 end
-
-
 
 class Point
   attr_accessor :x, :y

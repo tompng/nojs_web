@@ -26,6 +26,7 @@ class Channel
   end
 
   def deq timeout: 1
+    return @queue.deq unless timeout
     Timeout.timeout(timeout) { @queue.deq } rescue nil
   end
 

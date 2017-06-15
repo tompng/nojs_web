@@ -1,6 +1,8 @@
 require_relative './canvas'
 template = File.read "#{File.dirname(__FILE__)}/draw.html"
 
+canvas = Canvas.new
+
 get '/draw' do
   stream do |out|
     begin
@@ -22,8 +24,15 @@ get '/draw' do
       stamp = 0
       color = '#000'
       strokes = []
+
+      queue = Queue.new
+      Thread.new { loop { sleep 1;queue << nil } }
+      Thread.new { loop { queue << channel.deq(timeout: nil) } }
+      callback = -> type, data { queue << { type: type, data: data } }
+      canvas.listen callback
+
       loop do
-        cmd = channel.deq
+        cmd = queue.deq
         p cmd
         unless cmd
           out.write "\n"
@@ -74,6 +83,8 @@ get '/draw' do
         end
       end
     rescue => e
+      canvas.unlisten callback
+      queue.close
       channel.close
       raise e
     end

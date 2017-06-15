@@ -7,6 +7,8 @@ require './samples/click'
 require './samples/hover'
 require './draw/draw'
 
+set :bind, '0.0.0.0'
+
 get '/' do
   samples = %w(clock1 clock2 click1 click2 countdown hover draw)
   out = '<h1>samples</h1>'

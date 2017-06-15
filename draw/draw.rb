@@ -67,9 +67,17 @@ get '/draw' do
           if tool == 'curve'
             x, y = cmd[:x].to_i, cmd[:y].to_i
             strokes << [Point.new(x, y)]
-            if strokes.length >= 2
+            if strokes.size == 1
+              circle = Circle.new strokes[0][0], color: color
+              id, z = canvas.add circle
+              strokes[0][1] = id
+              strokes[0][2] = z
+            elsif strokes.size == 2
+              canvas.remove strokes[0][1]
+            end
+            if strokes.size >= 2
               points = strokes.map(&:first)
-              xs, ys = [:x, :y].map { |axis| Bezier.bezparam1d points.map(&axis), iterate: 4 }
+              xs, ys = [:x, :y].map { |axis| Bezier.bezparam1d points.map(&axis) }
               z = strokes[0][2]
               (strokes.size - 4 .. strokes.size - 3).each do |i|
                 next if i < 0

@@ -52,6 +52,27 @@ class Point
   end
 end
 
+class Circle
+  attr_accessor :point
+  def initialize point, line_width: 4, color: 'black'
+    @point = point
+    @color = color
+    @line_width = line_width
+  end
+  def to_svg id: nil, z: 0
+    size = @line_width + 2
+    x = @point.x.floor - @line_width/2 - 1
+    y = @point.y.floor - @line_width/2 - 1
+    style = %(left:#{x}px;top:#{y}px;z-index:#{z})
+    circle_style = %(fill:#{@color};)
+    %(
+      <svg id='#{id}' width='#{size}px' height='#{size}' style='#{style}'>
+        <circle cx='#{@point.x.round-x}' cy='#{@point.y.round-y}' r='#{@line_width/2}' style='#{circle_style}'/>
+      </svg>
+    )
+  end
+end
+
 class Bezier
   attr_accessor :a, :b, :c, :d
   attr_accessor :min, :max
@@ -75,11 +96,11 @@ class Bezier
     x = @min.x.floor - @line_width/2 - 1
     y = @min.y.floor - @line_width/2 - 1
     style = %(left:#{x}px;top:#{y}px;z-index:#{z})
-    path_style = %(stroke:#{@color};stroke-width:#{@line_width};fill:none)
+    path_style = %(stroke:#{@color};stroke-width:#{@line_width};fill:none;stroke-linecap:round)
     path = %(M#{a.x.round-x} #{a.y.round-y} C#{[b,c,d].map{|p|"#{p.x.round-x} #{p.y.round-y}"}.join(',')})
     %(
       <svg id='#{id}' width='#{w}px' height='#{h}' style='#{style}'>
-        <path d="#{path}" style='#{path_style}'/>
+        <path d='#{path}' style='#{path_style}'/>
       </svg>
     )
   end
@@ -105,7 +126,7 @@ class Bezier
     ].compact.minmax
   end
 
-  def self.bezparam1d values, closed: false, iterate: 3
+  def self.bezparam1d values, closed: false, iterate: 4
     params = values.map { 0 }
     iterate.times do
       params = params.each_with_index.map do |p, i|

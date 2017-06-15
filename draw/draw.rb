@@ -68,9 +68,19 @@ get '/draw' do
             strokes << Point.new(x, y)
             if strokes.length >= 2
               bez = Bezier.new strokes[-2], strokes[-2], strokes[-1], strokes[-1], color: color
-              out.write bez.to_svg
+              # out.write bez.to_svg
+              canvas.add bez
             end
           end
+        when 'initial'
+          cmd[:data].each do |id, (z, bez)|
+            out.write bez.to_svg id: id, z: z
+          end
+        when 'add'
+          id, z, bez = cmd[:data]
+          out.write bez.to_svg id: id, z: z
+        when 'remove'
+          out.write %(<style>##{cmd[:data]}{display:none}</style>)
         when 'color'
           color = cmd[:color]
           out.write "<style>#color{background:#{cmd[:color]}}</style>"

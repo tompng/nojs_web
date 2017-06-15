@@ -10,7 +10,7 @@ class Canvas
 
   def listen block
     @mutex.synchronize do
-      block.call :initial, @objects.dup
+      block.call 'initial', @objects.dup
       @listeners << block
     end
   end
@@ -22,26 +22,24 @@ class Canvas
   end
 
   def broadcast type, data
-    @mutex.synchronize do
-      @listeners.each do |l|
-        l.call type, data
-      end
+    @listeners.each do |l|
+      l.call type, data
     end
   end
 
   def add bezier, z: nil
     @mutex.synchronize do
-      z ||= @z += 1
-      id = @id += 1
+      z ||= @z_max += 1
+      id = "bz#{@id_max += 1}"
       @objects[id] = [z, bezier]
-      broadcast :add, [id, z, bezier]
+      broadcast 'add', [id, z, bezier]
     end
   end
 
   def remove id
     @mutex.synchronize do
       @objects.delete id
-      broadcast :remove, id
+      broadcast 'remove', id
     end
   end
 end
@@ -70,12 +68,12 @@ class Bezier
     @max = Point.new xmax, ymax
   end
 
-  def to_svg id: nil, zindex: 0
+  def to_svg id: nil, z: 0
     w = @max.x.ceil - @min.x.floor + @line_width + 2
     h = @max.y.ceil - @min.y.floor + @line_width + 2
     x = @min.x.floor - @line_width/2 - 1
     y = @min.y.floor - @line_width/2 - 1
-    style = %(left:#{x}px;top:#{y}px;z-index:zindex)
+    style = %(left:#{x}px;top:#{y}px;z-index:#{z})
     path_style = %(stroke:#{@color};stroke-width:#{@line_width};fill:none)
     path = %(M#{a.x.round-x} #{a.y.round-y} C#{[b,c,d].map{|p|"#{p.x.round-x} #{p.y.round-y}"}.join(',')})
     %(

@@ -63,7 +63,7 @@ get '/draw' do
         when 'canvas'
           if tool == 'curve'
             x, y = cmd[:x].to_i, cmd[:y].to_i
-            if strokes[-1] && (strokes[-1][0].x-x)**2+(strokes[-1][0].y-y)**2<16**2
+            if strokes[-1] && (strokes[-1][0].x-x)**2+(strokes[-1][0].y-y)**2<8**2
               cancel_curve.call
             else
               out.write %(<style>.pnt{display:block;left:#{x}px;top:#{y}px}</style>)

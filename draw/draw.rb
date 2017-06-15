@@ -25,6 +25,7 @@ get '/draw' do
       color = '#000'
       strokes = []
 
+
       queue = Queue.new
       Thread.new { loop { sleep 1;queue << nil } }
       Thread.new { loop { queue << channel.deq(timeout: nil) } }
@@ -65,11 +66,25 @@ get '/draw' do
         when 'canvas'
           if tool == 'curve'
             x, y = cmd[:x].to_i, cmd[:y].to_i
-            strokes << Point.new(x, y)
+            strokes << [Point.new(x, y)]
             if strokes.length >= 2
-              bez = Bezier.new strokes[-2], strokes[-2], strokes[-1], strokes[-1], color: color
-              # out.write bez.to_svg
-              canvas.add bez
+              points = strokes.map(&:first)
+              xs, ys = [:x, :y].map { |axis| Bezier.bezparam1d points.map(&axis), iterate: 4 }
+              z = strokes[0][2]
+              (strokes.size - 4 .. strokes.size - 3).each do |i|
+                next if i < 0
+                canvas.remove strokes[i][1]
+              end
+              (strokes.size - 4 .. strokes.size - 2).each do |i|
+                next if i < 0
+                pa, pb = points[i], points[i+1]
+                ca = Point.new pa.x+xs[i]/3, pa.y+ys[i]/3
+                cb = Point.new pb.x-xs[i+1]/3, pb.y-ys[i+1]/3
+                bez = Bezier.new pa, ca, cb, pb, color: color
+                id, z = canvas.add bez, z: z
+                strokes[i][1] = id
+                strokes[i][2] = z
+              end
             end
           end
         when 'initial'

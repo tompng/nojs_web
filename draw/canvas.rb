@@ -33,6 +33,7 @@ class Canvas
       id = "bz#{@id_max += 1}"
       @objects[id] = [z, bezier]
       broadcast 'add', [id, z, bezier]
+      [id, z]
     end
   end
 
@@ -62,8 +63,8 @@ class Bezier
   end
 
   def calc_boundingbox
-    xmin, xmax = abcdminmax *[a,b,c,d].map(&:x)
-    ymin, ymax = abcdminmax *[a,b,c,d].map(&:y)
+    xmin, xmax = self.class.abcdminmax *[a,b,c,d].map(&:x)
+    ymin, ymax = self.class.abcdminmax *[a,b,c,d].map(&:y)
     @min = Point.new xmin, ymin
     @max = Point.new xmax, ymax
   end
@@ -83,7 +84,7 @@ class Bezier
     )
   end
 
-  def abcdminmax a, b, c, d
+  def self.abcdminmax a, b, c, d
     # a*ttt 3*b*t*t*(1-t) 3*c*t*(1-t)*(1-t) d*(1-t)*(1-t)*(1-t)
     # tt*a + b*(2*t-3*tt) + c*(1-4t+3tt) - d*(1-2t+tt)
     t2 = a - 3*b + 3*c - d
@@ -102,5 +103,22 @@ class Bezier
       (at[ta] if 0 < ta && ta < 1),
       (at[tb] if 0 < tb && tb < 1)
     ].compact.minmax
+  end
+
+  def self.bezparam1d values, closed: false, iterate: 3
+    params = values.map { 0 }
+    iterate.times do
+      params = params.each_with_index.map do |p, i|
+        ia = (i-1)%params.size
+        ib = (i+1)%params.size
+        k = 4
+        unless closed
+          ia, k = i, 2 if i == 0
+          ib, k = i, 2 if i == params.size - 1
+        end
+        (3.0 * (values[ib] - values[ia]) - params[ia] - params[ib]) / k
+      end
+    end
+    params
   end
 end

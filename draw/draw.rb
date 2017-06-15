@@ -13,24 +13,22 @@ get '/draw' do
         eval exp
       end
 
-      a,b,c,d = 4.times.map{
-        Point.new rand(100..400), rand(100..400)
-      }
-      bez = Bezier.new a,b,c,d, line_width: 4, color: :blue
-
       out.write html
-      out.write bez.to_svg
       tool = 'curve'
       stamp = 0
       color = '#000'
       strokes = []
-
 
       queue = Queue.new
       Thread.new { loop { sleep 1;queue << nil } }
       Thread.new { loop { queue << channel.deq(timeout: nil) } }
       callback = -> type, data { queue << { type: type, data: data } }
       canvas.listen callback
+
+      cancel_curve = ->{
+        strokes = []
+        out.write %(<style>.pnt{display:none}</style>)
+      }
 
       loop do
         cmd = queue.deq
@@ -41,9 +39,9 @@ get '/draw' do
         end
         case cmd[:type]
         when 'tool'
+          cancel_curve.call
           case cmd[:tool]
           when 'eraser'
-            strokes = []
             out.write "<style>##{tool}{border-color:silver}</style>"
             out.write "<style>#eraser{border-color:black}</style>"
             tool = 'eraser'
@@ -54,7 +52,6 @@ get '/draw' do
           when 'color'
             out.write "<style>#color_modal{display:flex}</style>"
           when 'stamp'
-            strokes = []
             if tool == 'stamp'
               out.write "<style>#stamp_modal{display:flex}</style>"
             else
@@ -66,32 +63,37 @@ get '/draw' do
         when 'canvas'
           if tool == 'curve'
             x, y = cmd[:x].to_i, cmd[:y].to_i
-            strokes << [Point.new(x, y)]
-            if strokes.size == 1
-              circle = Circle.new strokes[0][0], color: color
-              id, z = canvas.add circle
-              strokes[0][1] = id
-              strokes[0][2] = z
-            elsif strokes.size == 2
-              canvas.remove strokes[0][1]
-            end
-            if strokes.size >= 2
-              points = strokes.map(&:first)
-              xs, ys = [:x, :y].map { |axis| Bezier.bezparam1d points.map(&axis) }
-              z = strokes[0][2]
-              (strokes.size - 4 .. strokes.size - 3).each do |i|
-                next if i < 0
-                canvas.remove strokes[i][1]
+            if strokes[-1] && (strokes[-1][0].x-x)**2+(strokes[-1][0].y-y)**2<16**2
+              cancel_curve.call
+            else
+              out.write %(<style>.pnt{display:block;left:#{x}px;top:#{y}px}</style>)
+              strokes << [Point.new(x, y)]
+              if strokes.size == 1
+                circle = Circle.new strokes[0][0], color: color
+                id, z = canvas.add circle
+                strokes[0][1] = id
+                strokes[0][2] = z
+              elsif strokes.size == 2
+                canvas.remove strokes[0][1]
               end
-              (strokes.size - 4 .. strokes.size - 2).each do |i|
-                next if i < 0
-                pa, pb = points[i], points[i+1]
-                ca = Point.new pa.x+xs[i]/3, pa.y+ys[i]/3
-                cb = Point.new pb.x-xs[i+1]/3, pb.y-ys[i+1]/3
-                bez = Bezier.new pa, ca, cb, pb, color: color
-                id, z = canvas.add bez, z: z
-                strokes[i][1] = id
-                strokes[i][2] = z
+              if strokes.size >= 2
+                points = strokes.map(&:first)
+                xs, ys = [:x, :y].map { |axis| Bezier.bezparam1d points.map(&axis) }
+                z = strokes[0][2]
+                (strokes.size - 4 .. strokes.size - 3).each do |i|
+                  next if i < 0
+                  canvas.remove strokes[i][1]
+                end
+                (strokes.size - 4 .. strokes.size - 2).each do |i|
+                  next if i < 0
+                  pa, pb = points[i], points[i+1]
+                  ca = Point.new pa.x+xs[i]/3, pa.y+ys[i]/3
+                  cb = Point.new pb.x-xs[i+1]/3, pb.y-ys[i+1]/3
+                  bez = Bezier.new pa, ca, cb, pb, color: color
+                  id, z = canvas.add bez, z: z
+                  strokes[i][1] = id
+                  strokes[i][2] = z
+                end
               end
             end
           end

@@ -15,12 +15,21 @@ svg{
 }
 .pnt{
   position:absolute;width:1;height:1;z-index:999999;
+  display:none;
 }
 .pnt:before{
   position:absolute;
   content:'';
-  left:-5px;top:-5px;width:11px;height:11px;
-  border:1px solid black;
+  left:-9px;top:-9px;width:18px;height:18px;
+  border:4px solid white;
+  box-sizing:border-box;
+  border-radius:50%;
+}
+.pnt:after{
+  position:absolute;
+  content:'';
+  left:-8px;top:-8px;width:16px;height:16px;
+  border:2px solid black;
   box-sizing:border-box;
   border-radius:50%;
 }
@@ -189,6 +198,4 @@ form.stamp-picker input{
 </div>
 <div class=objects-wrapper>
   <div id=objects>
-    <div class=pnt style='left:101px;top:101px;'></div>
-    <div class=pnt style='left:118px;top:113px;'></div>
-    <div class=pnt style='left:121px;top:131px;'></div>
+    <div class=pnt></div>

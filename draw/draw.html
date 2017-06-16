@@ -133,6 +133,9 @@ form.stamp-picker input{
     <input class=tool id='color' type=submit name=tool value=color>
   </form>
 </div>
+<form target=a method=post action={{action_path}} style='position:fixed;left:0;top:0;z-index:65536;'>
+  <input type=submit name=type value=dump>
+</form>
 <div class=canvas-wrapper>
   <div class=canvas>
     <form target=a method=post action={{action_path}}>

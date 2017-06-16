@@ -37,7 +37,6 @@ get '/draw' do
 
       loop do
         cmd = queue.deq
-        p cmd
         unless cmd
           buffer << "\n"
           flush.call
@@ -66,6 +65,8 @@ get '/draw' do
               buffer << "<style>#stamp{border-color:black}</style>"
             end
           end
+        when 'dump'
+          canvas.dump
         when 'canvas'
           p = Point.new cmd[:x].to_i, cmd[:y].to_i
           case tool

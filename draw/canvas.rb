@@ -29,6 +29,22 @@ class Canvas
     end
   end
 
+  def dump
+    strokes = []
+    @objects.each do |id, (z, bezier)|
+      next unless Bezier === bezier
+      prev_stroke = strokes.last
+      if prev_stroke&.last == bezier.a
+        prev_stroke << bezier.d
+      else
+        strokes << [bezier.a, bezier.d]
+      end
+    end
+    puts strokes.map{|stroke|
+      '['+stroke.map{|p|"[#{[p.x,p.y].map{|v|(v/512.0).round(2)}.join(',')}]"}.join(',')+']'
+    }.join(",\n")
+  end
+
   def replace id, bezier, z: nil
     @mutex.synchronize {
       return unless @objects[id]
@@ -76,6 +92,9 @@ class Point
   attr_accessor :x, :y
   def initialize x, y
     @x, @y = x, y
+  end
+  def == p
+    Point === p && p.x == x && p.y == y
   end
 end
 

@@ -49,10 +49,10 @@ class Canvas
     @mutex.synchronize do
       flags = id_object_zs.map { |id, _| @objects.has_key? id }
       existings = id_object_zs.select { |id, _| @objects[id] }
-      remove_without_mutex existings.map(&:first)
       objects = existings.map { |ioz| ioz[1] }
       zs =  id_object_zs.map { |ioz| ioz[2] }
       result = add_without_mutex(objects, zs: zs).dup
+      remove_without_mutex existings.map(&:first)
       flags.map { |f| result.shift if f }
     end
   end

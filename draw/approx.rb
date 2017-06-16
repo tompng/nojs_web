@@ -33,12 +33,9 @@ class Approx
       smin, smax = smin12 + smin21, smax12 + smax21
       vslope = (smin + smax) / 2
       sdif = (smax - smin) / 2
-      a12min, a12max = [[0, 0], [0, 1], [1, 0], [1, 1]].map { |s, t|
-        (a1min+s*(a1max-a1min))*(a2min+t*(a2max-a2min))
-      }.minmax
+      a12min, a12max = [a1min*a2min, a1min*a2max, a1max*a2min, a1max*a2max].minmax
       vmin = a12min - sdif + s12min - vslope / 2
       vmax = a12max + sdif + s12max - vslope / 2
-      # require 'pry';binding.pry
       Approx.new vmin, vmax, vslope
     else
       if x > 0
@@ -69,6 +66,38 @@ class Approx
   end
 
   def self.extract_negative tmin, tmax
+    ranges = []
+    add = lambda do |min, max|
+      if ranges.last&.[](1) == min
+        ranges.last[1] = max
+      else
+        ranges << [min, max]
+      end
+    end
+    n = 32
+    values = (n+1).times.map { |i| yield i / n.to_f }
+    n.times{|i|
+      t0 = i/n.to_f
+      t1 = (i+1)/n.to_f
+      v0 = values[i]
+      v1 = values[i+1]
+      if v0 <= 0 && v1 <= 0
+        add.call t0, t1
+        next
+      elsif v0 > 0 && v1 > 0
+        next
+      end
+      tt = t0 + (t1 - t0) * v0 / (v0 - v1)
+      if v0 <= 0
+        add.call t0, tt
+      else
+        add.call tt, t1
+      end
+    }
+    return ranges
+  end
+
+  def self.extract_negative2 tmin, tmax, diff: 1e-4
     cache_t = nil
     cache_y = nil
     cache_calc = lambda do |t|
@@ -94,7 +123,7 @@ class Approx
       ta = t0+(t1-t0)*zr[0]
       tb = t0+(t1-t0)*zr[1]
       add.call t0, ta if t0 != ta && cache_calc.call(t0) <= 0
-      if tb - ta < 1e-4
+      if tb - ta < diff
         y0 = cache_calc.call(ta)
         y1 = cache_calc.call(tb)
         add.call ta, tb if y0 <= 0 && y1 <= 0
@@ -109,7 +138,12 @@ class Approx
       end
       add.call tb, t1 if t1 != tb && cache_calc.call(t1) <= 0
     end
-    rec.call tmin.to_f, tmax.to_f
+    n = 8
+    n.times{|i|
+      t1=i/n.to_f
+      t2=(i+1)/n.to_f
+      rec.call tmin*(1-t1)+t1*tmax, tmin*(1-t2)+t2*tmax
+    }
     ranges
   end
 end

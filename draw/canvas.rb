@@ -155,7 +155,10 @@ class Bezier
     dx = (min.x..max.x).include?(p.x) ? 0 : [(p.x - min.x).abs, (p.x - max.x).abs].min
     dy = (min.y..max.y).include?(p.y) ? 0 : [(p.y - min.y).abs, (p.y - max.y).abs].min
     return if dx * dx + dy * dy > r * r
-    sections = Approx.extract_negative 0, 1 do |t|
+    $a=0;
+    sections = Approx.extract_negative 0, 1, diff: 1e-5 do |t|
+      $a+=1
+      time=Time.now
       tt = t*t
       ttt = tt*t
       s = (t - 1)*(-1)
@@ -165,8 +168,11 @@ class Bezier
       tss = t*ss
       x = ttt*a.x+tts*3*b.x+tss*3*c.x+sss*d.x-p.x
       y = ttt*a.y+tts*3*b.y+tss*3*c.y+sss*d.y-p.y
-      (x*x+y*y)*(-1) + r*r
+      out = (x*x+y*y)*(-1) + r*r
+      p Time.now-time
+      out
     end
+    $a
     return if sections == [[0, 1]]
     sections.map { |t0, t1| slice t0, t1 }
   end

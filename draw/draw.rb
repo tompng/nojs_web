@@ -92,7 +92,7 @@ get '/draw' do
               strokes << [p]
               if strokes.size == 1
                 circle = Circle.new strokes[0][0], color: color
-                id, z = canvas.add circle
+                id, z = canvas.add([circle]).first
                 strokes[0][1] = id
                 strokes[0][2] = z
               end
@@ -100,6 +100,8 @@ get '/draw' do
                 points = strokes.map(&:first)
                 xs, ys = [:x, :y].map { |axis| Bezier.bezparam1d points.map(&axis) }
                 z = strokes[0][2]
+                replaces = []
+                adds = []
                 (strokes.size - 4 .. strokes.size - 2).each do |i|
                   next if i < 0
                   pa, pb = points[i], points[i+1]
@@ -107,10 +109,22 @@ get '/draw' do
                   cb = Point.new pb.x-xs[i+1]/3, pb.y-ys[i+1]/3
                   bez = Bezier.new pa, ca, cb, pb, color: color
                   if strokes[i][1]
-                    id, z = canvas.replace strokes[i][1], bez, z: z
+                    replaces << [i, [strokes[i][1], bez, z]]
+                    # id, z = canvas.replace strokes[i][1], bez, z: z
                   else
-                    id, z = canvas.add bez, z: z
+                    adds << [i, bez]
                   end
+                end
+                idzupdates = []
+                unless replaces.empty?
+                  idzbs = canvas.replace replaces.map(&:last)
+                  idzupdates += replaces.map(&:first).zip(idzbs)
+                end
+                unless adds.empty?
+                  idzbs = canvas.add adds.map(&:last), zs: adds.map { z }
+                  idzupdates += adds.map(&:first).zip(idzbs)
+                end
+                idzupdates.each do |i, (id, z, _)|
                   if id && z
                     strokes[i][1] = id
                     strokes[i][2] = z
@@ -123,19 +137,20 @@ get '/draw' do
           when 'stamp'
             size = 128
             offset = Point.new(p.x-size/2, p.y-size/2)
-            stamps[stamp].beziers(offset: offset, scale: size, color: color).each do |bez|
-              canvas.add bez
-            end
+            canvas.add stamps[stamp].beziers(offset: offset, scale: size, color: color)
           end
         when 'initial'
           cmd[:data].each do |id, (z, bez)|
             buffer << bez.to_svg(id: id, z: z)
           end
         when 'add'
-          id, z, bez = cmd[:data]
-          buffer << bez.to_svg(id: id, z: z)
+          cmd[:data].each do |id, z, bez|
+            buffer << bez.to_svg(id: id, z: z)
+          end
         when 'remove'
-          buffer << %(<style>##{cmd[:data]}{display:none}</style>)
+          cmd[:data].each do |id|
+            buffer << %(<style>##{id}{display:none}</style>)
+          end
         when 'color'
           color = cmd[:color]
           buffer << "<style>#color{background:#{cmd[:color]}}</style>"

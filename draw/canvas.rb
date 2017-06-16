@@ -31,13 +31,13 @@ class Canvas
 
   def dump
     strokes = []
-    @objects.each do |id, (z, bezier)|
-      next unless Bezier === bezier
+    @objects.each do |id, (z, obj)|
+      next unless Bezier === obj
       prev_stroke = strokes.last
-      if prev_stroke&.last == bezier.a
-        prev_stroke << bezier.d
+      if prev_stroke&.last == obj.a
+        prev_stroke << obj.d
       else
-        strokes << [bezier.a, bezier.d]
+        strokes << [obj.a, obj.d]
       end
     end
     puts strokes.map{|stroke|
@@ -45,45 +45,58 @@ class Canvas
     }.join(",\n")
   end
 
-  def replace id, bezier, z: nil
-    @mutex.synchronize {
-      return unless @objects[id]
-      remove_without_mutex id
-      add_without_mutex bezier, z: z
-    }
+  def replace id_object_zs
+    @mutex.synchronize do
+      flags = id_object_zs.map { |id, _| @objects.has_key? id }
+      existings = id_object_zs.select { |id, _| @objects[id] }
+      remove_without_mutex existings.map(&:first)
+      objects = existings.map { |ioz| ioz[1] }
+      zs =  id_object_zs.map { |ioz| ioz[2] }
+      result = add_without_mutex(objects, zs: zs).dup
+      flags.map { |f| result.shift if f }
+    end
   end
 
-  def add bezier, z: nil
-    @mutex.synchronize { add_without_mutex bezier, z: z }
+  def add objects, zs: nil
+    @mutex.synchronize { add_without_mutex objects, zs: zs }
   end
 
-  def remove id
-    @mutex.synchronize { remove_without_mutex id }
+  def remove ids
+    @mutex.synchronize { remove_without_mutex ids }
   end
 
-  def add_without_mutex bezier, z: nil
-    z ||= @z_max += 1
-    id = "bz#{@id_max += 1}"
-    @objects[id] = [z, bezier]
-    broadcast 'add', [id, z, bezier]
-    [id, z]
+  def add_without_mutex objects, zs: nil
+    data = objects.zip(zs || []).map do |obj, z|
+      z ||= @z_max += 1
+      id = "bz#{@id_max += 1}"
+      @objects[id] = [z, obj]
+      [id, z, obj]
+    end
+    broadcast 'add', data
+    data
   end
 
-  def remove_without_mutex id
-    @objects.delete id
-    broadcast 'remove', id
+  def remove_without_mutex ids
+    ids.each { |id| @objects.delete id }
+    broadcast 'remove', ids
   end
 
   def erase p, r
     @mutex.synchronize do
-      @objects.to_a.each do |id, (z, bezier)|
-        new_objects = bezier.erase p, r
+      removes = []
+      adds = []
+      zs = []
+      @objects.each do |id, (z, obj)|
+        new_objects = obj.erase p, r
         next unless new_objects
-        remove_without_mutex id
-        new_objects.each do |obj|
-          add_without_mutex obj, z: z
+        removes << id
+        new_objects.each do |o|
+          adds << o
+          zs << z
         end
       end
+      remove_without_mutex removes
+      add_without_mutex adds, zs: zs
     end
   end
 end

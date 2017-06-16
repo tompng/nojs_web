@@ -1,6 +1,6 @@
 require_relative './canvas'
 require_relative './stamp'
-set :public_folder, './'
+
 template = File.read "#{File.dirname(__FILE__)}/draw.html"
 stamps = [
   Stamp::Star,

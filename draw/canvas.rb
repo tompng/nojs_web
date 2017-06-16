@@ -95,8 +95,8 @@ class Canvas
           zs << z
         end
       end
-      remove_without_mutex removes
       add_without_mutex adds, zs: zs
+      remove_without_mutex removes
     end
   end
 end

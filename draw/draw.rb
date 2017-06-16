@@ -5,6 +5,11 @@ canvas = Canvas.new
 
 get '/draw' do
   stream do |out|
+    buffer = []
+    flush = lambda do
+      out.write buffer.join
+      buffer = []
+    end
     begin
       channel = Channel.new
       action_path = channel.path
@@ -13,7 +18,7 @@ get '/draw' do
         eval exp
       end
 
-      out.write html
+      buffer << html
       tool = 'curve'
       stamp = 0
       color = '#000'
@@ -27,14 +32,15 @@ get '/draw' do
 
       cancel_curve = ->{
         strokes = []
-        out.write %(<style>.pnt{display:none}</style>)
+        buffer << %(<style>.pnt{display:none}</style>)
       }
 
       loop do
         cmd = queue.deq
         p cmd
         unless cmd
-          out.write "\n"
+          buffer << "\n"
+          flush.call
           next
         end
         case cmd[:type]
@@ -42,80 +48,85 @@ get '/draw' do
           cancel_curve.call
           case cmd[:tool]
           when 'eraser'
-            out.write "<style>##{tool}{border-color:silver}</style>"
-            out.write "<style>#eraser{border-color:black}</style>"
+            buffer << "<style>##{tool}{border-color:silver}</style>"
+            buffer << "<style>#eraser{border-color:black}</style>"
             tool = 'eraser'
           when 'curve'
-            out.write "<style>##{tool}{border-color:silver}</style>"
-            out.write "<style>#curve{border-color:black}</style>"
+            buffer << "<style>##{tool}{border-color:silver}</style>"
+            buffer << "<style>#curve{border-color:black}</style>"
             tool = 'curve'
           when 'color'
-            out.write "<style>#color_modal{display:flex}</style>"
+            buffer << "<style>#color_modal{display:flex}</style>"
           when 'stamp'
             if tool == 'stamp'
-              out.write "<style>#stamp_modal{display:flex}</style>"
+              buffer << "<style>#stamp_modal{display:flex}</style>"
             else
-              out.write "<style>##{tool}{border-color:silver}</style>"
+              buffer << "<style>##{tool}{border-color:silver}</style>"
               tool = 'stamp'
-              out.write "<style>#stamp{border-color:black}</style>"
+              buffer << "<style>#stamp{border-color:black}</style>"
             end
           end
         when 'canvas'
-          if tool == 'curve'
-            x, y = cmd[:x].to_i, cmd[:y].to_i
-            if strokes[-1] && (strokes[-1][0].x-x)**2+(strokes[-1][0].y-y)**2<8**2
+          p = Point.new cmd[:x].to_i, cmd[:y].to_i
+          case tool
+          when 'curve'
+            if strokes[-1] && (strokes[-1][0].x-p.x)**2+(strokes[-1][0].y-p.y)**2<8**2
               cancel_curve.call
             else
-              out.write %(<style>.pnt{display:block;left:#{x}px;top:#{y}px}</style>)
-              strokes << [Point.new(x, y)]
+              buffer << %(<style>.pnt{display:block;left:#{p.x}px;top:#{p.y}px}</style>)
+              strokes << [p]
               if strokes.size == 1
                 circle = Circle.new strokes[0][0], color: color
                 id, z = canvas.add circle
                 strokes[0][1] = id
                 strokes[0][2] = z
-              elsif strokes.size == 2
-                canvas.remove strokes[0][1]
               end
               if strokes.size >= 2
                 points = strokes.map(&:first)
                 xs, ys = [:x, :y].map { |axis| Bezier.bezparam1d points.map(&axis) }
                 z = strokes[0][2]
-                (strokes.size - 4 .. strokes.size - 3).each do |i|
-                  next if i < 0
-                  canvas.remove strokes[i][1]
-                end
                 (strokes.size - 4 .. strokes.size - 2).each do |i|
                   next if i < 0
                   pa, pb = points[i], points[i+1]
                   ca = Point.new pa.x+xs[i]/3, pa.y+ys[i]/3
                   cb = Point.new pb.x-xs[i+1]/3, pb.y-ys[i+1]/3
                   bez = Bezier.new pa, ca, cb, pb, color: color
-                  id, z = canvas.add bez, z: z
-                  strokes[i][1] = id
-                  strokes[i][2] = z
+                  if strokes[i][1]
+                    id, z = canvas.replace strokes[i][1], bez, z: z
+                  else
+                    id, z = canvas.add bez, z: z
+                  end
+                  if id && z
+                    strokes[i][1] = id
+                    strokes[i][2] = z
+                  end
                 end
               end
             end
+          when 'eraser'
+            puts [:erase, p].inspect
+            canvas.erase p, 48
           end
         when 'initial'
           cmd[:data].each do |id, (z, bez)|
-            out.write bez.to_svg id: id, z: z
+            buffer << bez.to_svg(id: id, z: z)
           end
         when 'add'
           id, z, bez = cmd[:data]
-          out.write bez.to_svg id: id, z: z
+          buffer << bez.to_svg(id: id, z: z)
         when 'remove'
-          out.write %(<style>##{cmd[:data]}{display:none}</style>)
+          buffer << %(<style>##{cmd[:data]}{display:none}</style>)
         when 'color'
           color = cmd[:color]
-          out.write "<style>#color{background:#{cmd[:color]}}</style>"
-          out.write "<style>#color_modal{display:none}</style>"
+          buffer << "<style>#color{background:#{cmd[:color]}}</style>"
+          buffer << "<style>#color_modal{display:none}</style>"
         when 'stamp'
           stamp = cmd[:stamp]
-          out.write "<style>#stamp_modal{display:none}</style>"
+          buffer << "<style>#stamp_modal{display:none}</style>"
         when 'close'
-          out.write "<style>##{cmd[:target]}_modal{display:none}</style>"
+          buffer << "<style>##{cmd[:target]}_modal{display:none}</style>"
         end
+        flush.call
       end
     rescue => e
       canvas.unlisten callback
@@ -123,6 +134,5 @@ get '/draw' do
       channel.close
       raise e
     end
-
   end
 end

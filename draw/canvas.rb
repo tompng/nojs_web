@@ -1,4 +1,6 @@
 require 'set'
+require_relative './approx.rb'
+
 class Canvas
   def initialize
     @id_max = 0
@@ -27,20 +29,45 @@ class Canvas
     end
   end
 
+  def replace id, bezier, z: nil
+    @mutex.synchronize {
+      return unless @objects[id]
+      remove_without_mutex id
+      add_without_mutex bezier, z: z
+    }
+  end
+
   def add bezier, z: nil
-    @mutex.synchronize do
-      z ||= @z_max += 1
-      id = "bz#{@id_max += 1}"
-      @objects[id] = [z, bezier]
-      broadcast 'add', [id, z, bezier]
-      [id, z]
-    end
+    @mutex.synchronize { add_without_mutex bezier, z: z }
   end
 
   def remove id
+    @mutex.synchronize { remove_without_mutex id }
+  end
+
+  def add_without_mutex bezier, z: nil
+    z ||= @z_max += 1
+    id = "bz#{@id_max += 1}"
+    @objects[id] = [z, bezier]
+    broadcast 'add', [id, z, bezier]
+    [id, z]
+  end
+
+  def remove_without_mutex id
+    @objects.delete id
+    broadcast 'remove', id
+  end
+
+  def erase p, r
     @mutex.synchronize do
-      @objects.delete id
-      broadcast 'remove', id
+      @objects.to_a.each do |id, (z, bezier)|
+        new_objects = bezier.erase p, r
+        next unless new_objects
+        remove_without_mutex id
+        new_objects.each do |obj|
+          add_without_mutex obj, z: z
+        end
+      end
     end
   end
 end
@@ -70,6 +97,10 @@ class Circle
         <circle cx='#{@point.x.round-x}' cy='#{@point.y.round-y}' r='#{@line_width/2}' style='#{circle_style}'/>
       </svg>
     )
+  end
+
+  def erase p, r
+    [] if (point.x - p.x)**2 + (point.y - p.y)**2 < r**2
   end
 end
 
@@ -103,6 +134,41 @@ class Bezier
         <path d='#{path}' style='#{path_style}'/>
       </svg>
     )
+  end
+
+  def slice t0, t1
+    dscale = (t1 - t0) / 3.0
+    slice_abcd = lambda do |a, b, c, d|
+      at = ->t{a*t**3+3*b*t**2*(1-t)+3*c*t*(1-t)**2+d*(1-t)**3}
+      dat = ->t{3*a*t**2+b*(6*t-9*t*t)+c*(3-12*t+9*t*t)-3*d*(1-t)**2}
+      a2 = at[t0]
+      d2 = at[t1]
+      [a2, a2 + dat[t0] * dscale, d2 - dat[t1] * dscale, d2]
+    end
+    xs = slice_abcd.call a.x, b.x, c.x, d.x
+    ys = slice_abcd.call a.y, b.y, c.y, d.y
+    ps = xs.zip(ys).map { |x, y| Point.new x, y }
+    Bezier.new *ps, line_width: @line_width, color: @color
+  end
+
+  def erase p, r
+    dx = (min.x..max.x).include?(p.x) ? 0 : [(p.x - min.x).abs, (p.x - max.x).abs].min
+    dy = (min.y..max.y).include?(p.y) ? 0 : [(p.y - min.y).abs, (p.y - max.y).abs].min
+    return if dx * dx + dy * dy > r * r
+    sections = Approx.extract_negative 0, 1 do |t|
+      tt = t*t
+      ttt = tt*t
+      s = (t - 1)*(-1)
+      ss = s*s
+      sss = ss*s
+      tts = tt*s
+      tss = t*ss
+      x = ttt*a.x+tts*3*b.x+tss*3*c.x+sss*d.x-p.x
+      y = ttt*a.y+tts*3*b.y+tss*3*c.y+sss*d.y-p.y
+      (x*x+y*y)*(-1) + r*r
+    end
+    return if sections == [[0, 1]]
+    sections.map { |t0, t1| slice t0, t1 }
   end
 
   def self.abcdminmax a, b, c, d

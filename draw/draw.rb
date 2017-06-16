@@ -13,6 +13,11 @@ get '/draw' do
     begin
       channel = Channel.new
       action_path = channel.path
+      dump_button = %(
+        <form target=a method=post action={{action_path}} style='position:fixed;left:0;top:0;z-index:65536;'>
+          <input type=submit name=type value=dump>
+        </form>
+      ) if params[:dump]
       html = template.gsub /{{[^{]+}}/ do |pattern|
         exp = pattern[2...-2]
         eval exp

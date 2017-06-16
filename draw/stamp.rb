@@ -1,3 +1,4 @@
+require 'base64'
 require_relative './canvas'
 class Stamp
   def initialize strokes
@@ -10,10 +11,14 @@ class Stamp
     beziers = beziers scale: size
     [
       %(<?xml version='1.0'?>),
-      %(<svg width='#{size}' height='#{size}px' version='1.1' xmlns='http://www.w3.org/2000/svg'>),
+      %(<svg viewBox='0 0 #{size} #{size}' version='1.1' xmlns='http://www.w3.org/2000/svg'>),
       beziers(scale: size).map(&:to_path).join,
       %(</svg>)
     ].join
+  end
+
+  def data_url
+    "data:image/svg+xml;base64,#{Base64.encode64(to_svg(128)).delete("\n")}"
   end
 
   def beziers offset: Point.new(0, 0), scale: 1, color: 'black'
@@ -126,11 +131,3 @@ Stamp::Penguin = Stamp.new([
   [[0.29,0.36],[0.36,0.35]],
   [[0.38,0.57],[0.44,0.49],[0.51,0.49],[0.54,0.55],[0.55,0.68],[0.54,0.79],[0.49,0.84],[0.39,0.79],[0.37,0.68],[0.38,0.57]]
 ])
-File.write 'star.svg',Stamp::Star.to_svg(512)
-File.write 'smile.svg',Stamp::Smile.to_svg(512)
-File.write 'sun.svg',Stamp::Sun.to_svg(512)
-File.write 'fish.svg',Stamp::Fish.to_svg(512)
-File.write 'cat.svg',Stamp::Fish.to_svg(512)
-File.write 'penguin.svg',Stamp::Penguin.to_svg(512)
-require 'pry'
-binding.pry

@@ -43,7 +43,7 @@ svg{
   margin: 0 auto;
 }
 .tool{
-  display: block;
+  display: inline-block;
   position: absolute;
   top: 4px;
   width: 80px;
@@ -56,6 +56,7 @@ svg{
   line-height:60px;
   outline: none;
   cursor:pointer;
+  overflow:hidden;
   text-shadow: 0 0 2px white,0 0 2px white,0 0 2px white,0 0 2px white
 }
 .tool:hover{background-color:#eee;}
@@ -64,6 +65,22 @@ svg{
 .tool#curve{left: 98px}
 .tool#stamp{left: 188px}
 .tool#color{right: 8px;}
+
+.tool.input-wrapper{
+  position:relative;
+}
+.tool.input-wrapper .current-stamp{
+  position:relative;width:40px;height:40px;
+  margin: 10 auto;
+}
+.current-stamp{display: none;}
+.current-stamp.stamp0{display:block;}
+.tool.input-wrapper input{
+  position:absolute;left:0;top:0;width:100%;height:100%;
+  opacity:0;outline:none;border-radius: 1px;
+  cursor: pointer;
+}
+
 #color{background:black;}
 #curve{border-color:black;}
 input[type=image]{
@@ -103,24 +120,44 @@ form.color-picker input{
   outline: none;
   color: transparent;
   cursor: pointer;
+  position:relative;
 }
+
+.stamp0:before,.stamp1:before,.stamp2:before,.stamp3:before,.stamp4:before,.stamp5:before{
+  position:absolute;
+  left:0;top:0;
+  width:100%;height:100%;
+}
+.stamp0:before{content: url({{stamps[0].data_url}});}
+.stamp1:before{content: url({{stamps[1].data_url}});}
+.stamp2:before{content: url({{stamps[2].data_url}});}
+.stamp3:before{content: url({{stamps[3].data_url}});}
+.stamp4:before{content: url({{stamps[4].data_url}});}
+.stamp5:before{content: url({{stamps[5].data_url}});}
 form.stamp-picker{
-  width: 480px;
+  width: 320px;
   padding: 40px 0;
   text-align: center;
   font-size: 0;
 }
-form.stamp-picker input{
+form.stamp-picker .input-wrapper{
+  position: relative;
+  display: inline-block;
   width: 80px;
   height: 80px;
   margin: 8px;
-  border: none;
   border-radius: 4px;
   border: 2px solid silver;
+  background-color: white;
+  background-size: contain;
+}
+form.stamp-picker .input-wrapper input{
   outline: none;
   color: transparent;
+  background: transparent;
   cursor: pointer;
-  background-color: white;
+  opacity: 0;
+  position: absolute;left:0;top:0;width:100%;height:100%;
 }
 </style>
 <iframe style='display:none' name=a></iframe>
@@ -129,7 +166,15 @@ form.stamp-picker input{
     <input type=hidden name=type value=tool>
     <input class=tool id='eraser' type=submit name=tool value=eraser>
     <input class=tool id='curve' type=submit name=tool value=curve>
-    <input class=tool id='stamp' type=submit name=tool value=stamp>
+    <div class='tool input-wrapper' id='stamp'>
+      <div class='current-stamp stamp0'></div>
+      <div class='current-stamp stamp1'></div>
+      <div class='current-stamp stamp2'></div>
+      <div class='current-stamp stamp3'></div>
+      <div class='current-stamp stamp4'></div>
+      <div class='current-stamp stamp5'></div>
+      <input type=submit name=tool value=stamp>
+    </div>
     <input class=tool id='color' type=submit name=tool value=color>
   </form>
 </div>
@@ -183,16 +228,14 @@ form.stamp-picker input{
     <form target=a method=post action={{action_path}} class=stamp-picker>
       <input type=hidden name=type value=stamp>
       <div>
-        <input type=submit name=stamp value=0 style='background-image:url(stamp0.svg)'>
-        <input type=submit name=stamp value=1 style='background-image:url(stamp1.svg)'>
-        <input type=submit name=stamp value=2 style='background-image:url(stamp2.svg)'>
-        <input type=submit name=stamp value=3 style='background-image:url(stamp3.svg)'>
+        <div class='input-wrapper stamp0'><input type=submit name=stamp value=0></div>
+        <div class='input-wrapper stamp1'><input type=submit name=stamp value=1></div>
+        <div class='input-wrapper stamp2'><input type=submit name=stamp value=2></div>
       </div>
       <div>
-        <input type=submit name=stamp value=4 style='background-image:url(stamp4.svg)'>
-        <input type=submit name=stamp value=5 style='background-image:url(stamp5.svg)'>
-        <input type=submit name=stamp value=6 style='background-image:url(stamp6.svg)'>
-        <input type=submit name=stamp value=7 style='background-image:url(stamp7.svg)'>
+        <div class='input-wrapper stamp3'><input type=submit name=stamp value=3></div>
+        <div class='input-wrapper stamp4'><input type=submit name=stamp value=4></div>
+        <div class='input-wrapper stamp5'><input type=submit name=stamp value=5></div>
       </div>
     </form>
   </div>

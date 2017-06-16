@@ -1,6 +1,15 @@
 require_relative './canvas'
+require_relative './stamp'
+set :public_folder, './'
 template = File.read "#{File.dirname(__FILE__)}/draw.html"
-
+stamps = [
+  Stamp::Star,
+  Stamp::Sun,
+  Stamp::Smile,
+  Stamp::Cat,
+  Stamp::Fish,
+  Stamp::Penguin
+]
 canvas = Canvas.new
 
 get '/draw' do
@@ -127,7 +136,9 @@ get '/draw' do
           buffer << "<style>#color{background:#{cmd[:color]}}</style>"
           buffer << "<style>#color_modal{display:none}</style>"
         when 'stamp'
+          buffer << "<style>.current-stamp.stamp#{stamp}{display:none;}</style>"
           stamp = cmd[:stamp]
+          buffer << "<style>.current-stamp.stamp#{stamp}{display:block;}</style>"
           buffer << "<style>#stamp_modal{display:none}</style>"
         when 'close'
           buffer << "<style>##{cmd[:target]}_modal{display:none}</style>"

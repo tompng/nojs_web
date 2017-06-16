@@ -119,8 +119,13 @@ get '/draw' do
               end
             end
           when 'eraser'
-            puts [:erase, p].inspect
             canvas.erase p, 48
+          when 'stamp'
+            size = 128
+            offset = Point.new(p.x-size/2, p.y-size/2)
+            stamps[stamp].beziers(offset: offset, scale: size, color: color).each do |bez|
+              canvas.add bez
+            end
           end
         when 'initial'
           cmd[:data].each do |id, (z, bez)|
@@ -137,7 +142,7 @@ get '/draw' do
           buffer << "<style>#color_modal{display:none}</style>"
         when 'stamp'
           buffer << "<style>.current-stamp.stamp#{stamp}{display:none;}</style>"
-          stamp = cmd[:stamp]
+          stamp = cmd[:stamp].to_i if stamps[cmd[:stamp].to_i]
           buffer << "<style>.current-stamp.stamp#{stamp}{display:block;}</style>"
           buffer << "<style>#stamp_modal{display:none}</style>"
         when 'close'

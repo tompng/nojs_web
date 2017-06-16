@@ -126,7 +126,7 @@ class Circle
     circle_style = %(fill:#{@color};)
     %(
       <svg id='#{id}' width='#{size}px' height='#{size}' style='#{style}'>
-        <circle cx='#{@point.x.round-x}' cy='#{@point.y.round-y}' r='#{@line_width/2}' style='#{circle_style}'/>
+        <circle cx='#{@point.x.round(1)-x}' cy='#{@point.y.round(1)-y}' r='#{@line_width/2}' style='#{circle_style}'/>
       </svg>
     )
   end
@@ -155,7 +155,7 @@ class Bezier
 
   def to_path offset=Point.new(0, 0)
     path_style = %(stroke:#{@color};stroke-width:#{@line_width};fill:none;stroke-linecap:round)
-    path = %(M#{(a.x+offset.x).round} #{(a.y+offset.y).round} C#{[b,c,d].map{|p|"#{(p.x+offset.x).round} #{(p.y+offset.y).round}"}.join(',')})
+    path = %(M#{(a.x+offset.x).round(1)} #{(a.y+offset.y).round(1)} C#{[b,c,d].map{|p|"#{(p.x+offset.x).round(1)} #{(p.y+offset.y).round(1)}"}.join(',')})
     %(<path d='#{path}' style='#{path_style}'/>)
   end
 

@@ -6,6 +6,8 @@ require './samples/sleep'
 require './samples/click'
 require './samples/hover'
 require './draw/draw'
+require 'puma'
+Puma::Server.class_eval{def cork_socket*;end;def uncork_socket*;end}
 
 set :bind, '0.0.0.0'
 set :server_settings, { Threads: '0:128' }

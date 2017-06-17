@@ -8,6 +8,7 @@ require './samples/hover'
 require './draw/draw'
 
 set :bind, '0.0.0.0'
+set :server_settings, { Threads: '0:128' }
 
 get '/' do
   samples = %w(clock1 clock2 click1 click2 countdown hover draw)

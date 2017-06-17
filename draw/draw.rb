@@ -35,6 +35,7 @@ get '/draw' do
       buffer << html
       tool = 'curve'
       stamp = 0
+      stamp_once_opened = false
       color = '#000'
       strokes = []
 
@@ -71,9 +72,11 @@ get '/draw' do
           when 'color'
             buffer << "<style>#color_modal{display:flex}</style>"
           when 'stamp'
-            if tool == 'stamp'
+            if tool == 'stamp' || !stamp_once_opened
+              stamp_once_opened = true
               buffer << "<style>#stamp_modal{display:flex}</style>"
-            else
+            end
+            if tool != 'stamp'
               buffer << "<style>##{tool}{border-color:silver}</style>"
               tool = 'stamp'
               buffer << "<style>#stamp{border-color:black}</style>"

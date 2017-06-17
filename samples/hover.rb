@@ -44,13 +44,15 @@ get '/hover' do
         out.write "\n"
         next
       end
+      black = ->{ '#'+3.times.map { rand(0..4) }.join }
+      white = ->{ '#'+3.times.map { rand(11..15).to_s(16) }.join }
       if cmd[:h]
         i, j = cmd[:h].split('/').map &:to_i
         out.write %(<p id=p#{id}>click at #{32*i+cmd['h.x'].to_i} #{32*j+cmd['h.y'].to_i}</p>)
         mode = !colors[i][j]
         colors[i][j] = mode
         out.write %(<style>
-          #h_#{i}_#{j}{background:#{colors[i][j] ? 'black' : 'white'};}
+          #h_#{i}_#{j}{background:#{colors[i][j] ? black.all : white.call};}
         </style>)
         id+=1
       elsif cmd[:type]=='hover'
@@ -63,7 +65,7 @@ get '/hover' do
           )
         end
         out.write %(
-          #h_#{i}_#{j}{background:#{colors[i][j] ? 'black' : 'white'};}
+          #h_#{i}_#{j}{background:#{colors[i][j] ? black.call : white.call};}
         )
         out.write '</style>'
         prev = [i, j]

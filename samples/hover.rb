@@ -52,7 +52,7 @@ get '/hover' do
         mode = !colors[i][j]
         colors[i][j] = mode
         out.write %(<style>
-          #h_#{i}_#{j}{background:#{colors[i][j] ? black.all : white.call};}
+          #h_#{i}_#{j}{background:#{colors[i][j] ? black.call : white.call};}
         </style>)
         id+=1
       elsif cmd[:type]=='hover'

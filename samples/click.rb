@@ -3,7 +3,6 @@ get '/click1' do
     begin
       ch = Channel.new
       out.puts %(
-        <title>countdown watch</title>
         <iframe name=a style='display:none'></iframe>
         <form action='#{ch.path}' method=post target=a><input name=data type=submit value='buttonA'></form>
         <form action='#{ch.path}' method=post target=a><input name=data type=submit value='buttonB'></form>

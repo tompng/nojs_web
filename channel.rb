@@ -17,7 +17,9 @@ class Channel
   end
 
   def close
-    @@channels.delete @id
+    @@mutex.synchronize do
+      @@channels.delete @id
+    end
     @queue.close
   end
 
@@ -35,7 +37,9 @@ class Channel
   end
 
   def self.trigger id, cmd
-    @@channels[id]&.trigger cmd
+    @@mutex.synchronize do
+      @@channels[id]&.trigger cmd
+    end
   end
 end
 

@@ -179,7 +179,6 @@ class View
         fingerprint: dom_fingerprint(dom)
       }
     end
-    p [:update, diffs.size, removes.size, new_doms.size]
     @rendered_contents = new_contents
     htmls << "<style>#{style_updates.join "\n"}</style>" unless style_updates.empty?
     htmls.join("\n")
@@ -342,7 +341,7 @@ class Page
     @changed = lambda do
       next if @needs_render
       @needs_render = true
-      channel << :changed rescue nil
+      channel.trigger :changed rescue nil
     end
     instance_exec @global, @data, &block
   end
@@ -386,14 +385,16 @@ class Page
   end
 
   def run
+    render
     loop do
-      render
       command = @channel.deq
       if command == :changed
         render
       elsif command.is_a? Hash
         action = @view.actions[command[:handler]]
-        action.arity.zero? ? action.call : action&.call(command) if action
+        if action
+          action.arity.zero? ? action.call : action&.call(command)
+        end
       end
       @stream.puts
     end

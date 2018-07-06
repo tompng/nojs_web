@@ -257,7 +257,7 @@ class View
       attributes[:method] = :post
     end
     attr_string = attributes.map do |key, value|
-      %(#{key}="#{CGI.escape value}")
+      %(#{key}="#{CGI.escape_html value}")
     end
     output << "<#{dom[:name]} #{attr_string.join ' '}>"
     prepare_html dom[:children], output, styles, actions
@@ -359,6 +359,7 @@ class Page
   end
 
   def render
+    return unless @needs_render
     @needs_render = false
     unsubscribe
     subscribe
@@ -366,13 +367,15 @@ class Page
   end
 
   def run
-    render
+    Thread.new { binding.pry } # TODO remove this
     loop do
+      render
       command = @channel.deq
       if command == :changed
         render
       elsif command.is_a? Hash
-        @view.actions[command[:handler]]&.call command
+        action = @view.actions[command[:handler]]
+        action.arity.zero? ? action.call : action&.call(command) if action
       end
       @stream.puts
     end

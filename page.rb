@@ -110,6 +110,60 @@ class ArrayModel < Model
   end
 end
 
+class View
+  def initialize
+    @body = []
+    @current = @body
+  end
+
+  def contents
+    @contents_added = true
+    { type: :contents }
+  end
+
+  def text(text)
+    raise 'no dom after contents' if @contents_added
+    @current << text.to_s
+  end
+
+  %i[
+    a b u center h1 h2 h3 h4 h5 h6 div span
+    form input article header hr i img label table li ol ul
+    svg tbody thead textarea br strong small dl dt tr th td
+  ].each do |name|
+    define_method name do |*args, &block|
+      tag name, *args, &block
+    end
+  end
+
+  def tag(name, style: nil, onclick: nil, onsubmit: nil, text: nil, **attr)
+    raise 'no dom after contents' if @contents_added
+    raise 'onclick is only for tag a' if name != :a && onclick
+    raise 'onsubmit is only for tag form' if name != :form && onsubmit
+    raise 'text xor block' if text && block_given?
+    el = {
+      type: :tag,
+      name: name,
+      attr: attr,
+      style: style,
+      onclick: onclick,
+      onsubmit: onsubmit,
+      children: []
+    }
+    puts :block_given_test, block_given?, name
+    if block_given?
+      tmp = @current
+      @current = el[:children]
+      puts :block_call
+      yield
+      @current = tmp
+    elsif text
+      el[:children] << text.to_s
+    end
+    @current << el
+  end
+end
+
 class PageView
   def initialize(global, stream, channel)
     @global = global
@@ -124,6 +178,12 @@ class PageView
       @needs_render = true
       channel << :changed rescue nil
     end
+  end
+
+  def view
+  end
+
+  def css
   end
 
   def unsubscribe

@@ -403,8 +403,8 @@ class Page
   end
 end
 
-def page(path, &block)
-  global = HashModel.new
+def page(path, global = {}, &block)
+  global = HashModel.new global
   get path do
     stream do |out|
       ch = Channel.new

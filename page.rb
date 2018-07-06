@@ -49,10 +49,12 @@ class HashModel < Model
   end
 
   def _transform!(output = [])
+    output << self
     @data.transform_values!(&Model.method(:convert))
     @data.each_value do |value|
       value._transform! output if value.is_a? Model
     end
+    output
   end
 
   def inspect
@@ -85,10 +87,12 @@ class ArrayModel < Model
   alias << push
 
   def _transform!(output = [])
+    output << self
     @data.map!(&Model.method(:convert))
     @data.each do |value|
       value._transform! output if value.is_a? Model
     end
+    output
   end
 
   %i[shift unshift pop push sort! map! replace <<].each do |name|
@@ -111,7 +115,7 @@ class ArrayModel < Model
 end
 
 class View
-  attr_readers :actions
+  attr_reader :actions
   def initialize(channel, &block)
     renderer = DOMRenderer.new allow_contents: true
     renderer.instance_eval(&block)
@@ -131,7 +135,7 @@ class View
 
   def render_contents_diff
     renderer = DOMRenderer.new allow_contents: false
-    renderer.instance_eval(&block)
+    renderer.instance_eval(&@contents_block)
     new_doms = renderer.dom_tree
     removes = []
     diffs = []
@@ -177,7 +181,7 @@ class View
         dom: dom
       }
     end
-    @rendered_contents = new_contensts
+    @rendered_contents = new_contents
     htmls << "<style>#{style_updates}</style>"
     htmls.join("\n")
   end
@@ -216,16 +220,16 @@ class View
   end
 
   def extract_style_actions dom, styles, actions
-    return dom.each { |d| extract_style_actions d, styes, actions } if dom.is_a? Array
+    return dom.each { |d| extract_style_actions d, styles, actions } if dom.is_a? Array
     return if dom.is_a? String
     styles << dom[:style] if dom[:style]
     handler = dom[:onclick] || dom[:onsubmit]
     actions << handler if handler
-    extract_style_actions dom[:children], styes, actions
+    extract_style_actions dom[:children], styles, actions
   end
 
   def prepare_html dom, output, styles, actions
-    return dom.each { |d| prepare_html d, output, styes, actions } if dom.is_a? Array
+    return dom.each { |d| prepare_html d, output, styles, actions } if dom.is_a? Array
     return output << CGI.escape_html(dom) if dom.is_a? String
     return output.freeze if dom[:type] == :contents
     attributes = dom[:attr].dup
@@ -256,7 +260,7 @@ class View
       %(#{key}="#{CGI.escape value}")
     end
     output << "<#{dom[:name]} #{attr_string.join ' '}>"
-    prepare_html dom[:children], output, styes, actions
+    prepare_html dom[:children], output, styles, actions
     output << "</#{dom[:name]}>" unless output.frozen?
   end
 
@@ -309,11 +313,9 @@ class DOMRenderer
       onsubmit: onsubmit,
       children: []
     }
-    puts :block_given_test, block_given?, name
     if block_given?
       tmp = @current
       @current = el[:children]
-      puts :block_call
       yield
       @current = tmp
     elsif text
@@ -337,13 +339,11 @@ class Page
       @needs_render = true
       channel << :changed rescue nil
     end
-    @view = View.new channel, &block
+    instance_exec @global, @data, &block
   end
 
-  def view
-  end
-
-  def css
+  def view &block
+    @view = View.new @channel, &block
   end
 
   def unsubscribe
@@ -366,6 +366,7 @@ class Page
   end
 
   def run
+    render
     loop do
       command = @channel.deq
       if command == :changed

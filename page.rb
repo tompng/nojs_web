@@ -157,7 +157,7 @@ class View
       extract_style_actions dom, styles, actions
       content[:styles].to_a.zip styles do |(id, old_style), new_style|
         changed = new_style.to_a - old_style.to_a
-        style_updates << "##{id}{#{css_to_string(changed)}}"
+        style_updates << "##{id}{#{View.css_to_string(changed)}}"
         content[:styles][id] = new_style
       end
       content[:action_keys].zip(actions) { |id, action| @actions[id] = action }
@@ -205,7 +205,7 @@ class View
       next if value[:current] == style
       changed = style.to_a - value[:current].to_a
       value[:current] = style
-      diff << "##{id}{#{css_to_string(changed)}}"
+      diff << "##{id}{#{View.css_to_string(changed)}}"
     end
     "<style>#{diff.join("\n")}</style>"
   end
@@ -219,7 +219,7 @@ class View
     styles.each do |id, block|
       css = block.call
       @styles[id] = { current: css, block: block }
-      style_list << "##{id}{#{css_to_string block.call}}"
+      style_list << "##{id}{#{View.css_to_string block.call}}"
     end
     @dom_tree = nil
     style_html = "<style>#{style_list.join "\n"}</style>"
@@ -268,7 +268,7 @@ class View
     output << "</#{dom[:name]}>" unless output.frozen?
   end
 
-  def css_to_string css
+  def self.css_to_string css
     css.map { |key, value| "#{key}: #{value};" }.join
   end
 end
@@ -338,6 +338,7 @@ class Page
     @global_watchings = []
     @local_watchings = []
     @needs_render = true
+    @styles = {}
     @changed = lambda do
       next if @needs_render
       @needs_render = true
@@ -346,7 +347,11 @@ class Page
     instance_exec @global, @data, &block
   end
 
-  def view &block
+  def style(selector, &block)
+    @styles[selector] = { current: {}, block: block }
+  end
+
+  def view(&block)
     @view = View.new @channel, &block
   end
 
@@ -367,7 +372,17 @@ class Page
     @needs_render = false
     unsubscribe
     subscribe
-    @stream.puts @view.render
+    output = @view.render
+    style_updates = []
+    @styles.each do |selector, style|
+      new_css = style[:block].call
+      diff = new_css.to_a - style[:current].to_a
+      style[:current] = new_css
+      next if diff.empty?
+      style_updates << "#{selector}{#{View.css_to_string diff}}"
+    end
+    output << "<style>#{style_updates.join "\n"}</style>" unless style_updates.empty?
+    @stream.puts output
   end
 
   def run

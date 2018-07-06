@@ -111,18 +111,108 @@ class ArrayModel < Model
 end
 
 class View
-  def initialize
-    @body = []
-    @current = @body
+  attr_readers :actions
+  def initialize(channel, &block)
+    renderer = DOMRenderer.new allow_contents: true
+    renderer.instance_eval(&block)
+    @dom_tree = renderer.dom_tree
+    @contents_block = renderer.contents_block
+    @actions = {}
+    @styles = {}
+    @channel = channel
+    @initial_rendered = false
+    @contents = []
   end
 
-  def contents
-    @contents_added = true
-    { type: :contents }
+  def render
+    return initial_render unless @initial_rendered
+    render_diff + render_contents_diff
+  end
+
+  def render_contents_diff
+  end
+
+  def render_diff
+    diff = []
+    @styles.each do |key, value|
+      style = value[:block].call
+      next if value[:current] == style
+      changed = style.to_a - value[:current].to_a
+      value[:current] = style
+      diff << "##{value[:id]}{#{css_to_string(changed)}}"
+    end
+    "<style>#{diff.join("\n")}</style>"
+  end
+
+  def initial_render
+    @initial_rendered = true
+    @html = '<iframe name=iframe style="display:none"></iframe>'.dup
+    prepare_html @dom_tree
+    @dom_tree = nil
+    output = @html
+    @html = nil
+    output + render_contents_diff
+  end
+
+  def prepare_html dom
+    return dom.each { |d| prepare_html d } if dom.is_a? Array
+    return @html << CGI.escape_html(dom) if dom.is_a? String
+    return @html.freeze if dom[:type] == :contents
+    attributes = dom[:attr].dup
+    if dom[:style] || dom[:onclick] || dom[:onsubmit]
+      id = rand.to_s
+      attributes[:id] = id
+    end
+    if dom[:style]
+      style = dom[:style].call
+      @styles[id] = {
+        id: id,
+        current: style.dup,
+        block: dom[:style]
+      }
+      attributes[:style] = css_to_string style
+    end
+    handler = dom[:onclick] || dom[:onsubmit]
+    if handler
+      @actions[id] = handler
+      attributes[:target] = 'iframe'
+    end
+    if dom[:onclick]
+      attributes[:href] = "#{@channel.path}?handler=#{id}"
+    elsif dom[:onsubmit]
+      attributes[:action] = "#{@channel.path}?handler=#{id}"
+      attributes[:method] = :post
+    end
+    attr_string = attributes.map do |key, value|
+      %(#{key}="#{CGI.escape value}")
+    end
+    @html << "<#{dom[:name]} #{attr_string.join ' '}>"
+    prepare_html dom[:children]
+    @html << "</#{dom[:name]}>" unless @html.frozen?
+  end
+
+  def css_to_string css
+    css.map { |key, value| "#{key}: #{value};" }.join
+  end
+end
+
+class DOMRenderer
+  attr_reader :dom_tree, :contents_block
+  def initialize allow_contents:
+    @allow_contents = allow_contents
+    @dom_tree = []
+    @current = @dom_tree
+  end
+
+  def contents(&block)
+    raise unless @allow_contents
+    raise unless block_given?
+    @contents_block = block
+    { type: :contents, block: block }
   end
 
   def text(text)
-    raise 'no dom after contents' if @contents_added
+    raise 'no dom after contents' if @contents_block
     @current << text.to_s
   end
 
@@ -137,7 +227,7 @@ class View
   end
 
   def tag(name, style: nil, onclick: nil, onsubmit: nil, text: nil, **attr)
-    raise 'no dom after contents' if @contents_added
+    raise 'no dom after contents' if @contents_block
     raise 'onclick is only for tag a' if name != :a && onclick
     raise 'onsubmit is only for tag form' if name != :form && onsubmit
     raise 'text xor block' if text && block_given?
@@ -164,8 +254,8 @@ class View
   end
 end
 
-class PageView
-  def initialize(global, stream, channel)
+class Page
+  def initialize(global, stream, channel, &block)
     @global = global
     @stream = stream
     @channel = channel
@@ -178,6 +268,7 @@ class PageView
       @needs_render = true
       channel << :changed rescue nil
     end
+    @view = View.new channel, &block
   end
 
   def view
@@ -202,6 +293,7 @@ class PageView
     @needs_render = false
     unsubscribe
     subscribe
+    @stream.puts @view.render
   end
 
   def run
@@ -209,8 +301,10 @@ class PageView
       command = @channel.deq
       if command == :changed
         render
-
+      elsif command.is_a? Hash
+        @view.actions[command[:handler]]&.call command
       end
+      @stream.puts
     end
   ensure
     unsubscribe
@@ -222,7 +316,7 @@ def page(path, &block)
   get path do
     stream do |out|
       ch = Channel.new
-      page = PageView.new global, out, ch, &block
+      page = Page.new global, out, ch, &block
       page.run
     ensure
       ch.close

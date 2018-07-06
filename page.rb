@@ -132,23 +132,54 @@ class View
   def render_contents_diff
     renderer = DOMRenderer.new allow_contents: false
     renderer.instance_eval(&block)
-    contents = renderer.dom_tree
-    new_contents = contents.dup
+    new_doms = renderer.dom_tree
     removes = []
     diffs = []
-    first_fingerprint = dom_fingerprint new_contents.first if new_contents.first
+    first_fingerprint = dom_fingerprint new_doms.first if new_doms.first
     @rendered_contents.each do |content|
       dom_fingerprint = content[:dom]
       next removes << content unless dom_fingerprint != first_fingerprint
-      diffs << [content, new_contents.first]
-      new_contents.shift
-      first_fingerprint = dom_fingerprint new_contents.first if new_contents.first
+      diffs << [content, new_doms.first]
+      new_doms.shift
+      first_fingerprint = dom_fingerprint new_doms.first if new_doms.first
     end
-    remove_css = []
-    removes.each { |content| remove_css << "##{content[:id]}{display: none}" }
-    diffs.map {
-
-    }
+    style_updates = []
+    removes.each { |content| style_updates << "##{content[:id]}{display: none}" }
+    new_contents = []
+    removes.each do |content|
+      content[:action_keys].each { |id| @actions.delete id }
+    end
+    diffs.map do |content, dom|
+      styles = []
+      actions = []
+      extract_style_actions dom, styles, actions
+      content[:styles].to_a.zip styles do |(id, old_style), new_style|
+        changed = new_style.to_a - old_style.to_a
+        style_updates << "##{id}{#{css_to_string(changed)}}"
+        content[:styles][id] = new_style
+      end
+      content[:action_keys].zip(actions) { |id, action| @actions[id] = action }
+      new_contents << content
+    end
+    htmls = []
+    new_doms.each do |dom|
+      html = ''
+      styles = {}
+      actions = {}
+      prepare_html dom, html, styles, actions
+      content_id = rand
+      htmls << "<div id='#{rand}'>#{html}</div>"
+      actions.each { |id, action| @actions[id] = action }
+      new_contents << {
+        id: content_id,
+        styles: styles.transform_values { |s| s[:current] },
+        action_keys: actions.keys,
+        dom: dom
+      }
+    end
+    @rendered_contents = new_contensts
+    htmls << "<style>#{style_updates}</style>"
+    htmls.join("\n")
   end
 
   def dom_fingerprint dom
@@ -166,12 +197,12 @@ class View
 
   def render_diff
     diff = []
-    @styles.each do |key, value|
+    @styles.each do |id, value|
       style = value[:block].call
       next if value[:current] == style
       changed = style.to_a - value[:current].to_a
       value[:current] = style
-      diff << "##{value[:id]}{#{css_to_string(changed)}}"
+      diff << "##{id}{#{css_to_string(changed)}}"
     end
     "<style>#{diff.join("\n")}</style>"
   end
@@ -205,7 +236,6 @@ class View
     if dom[:style]
       style = dom[:style].call
       styles[id] = {
-        id: id,
         current: style.dup,
         block: dom[:style]
       }

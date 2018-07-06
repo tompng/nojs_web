@@ -1,6 +1,5 @@
 class Model
   def initialize
-    @version = rand
     @watcher = Set.new
   end
 
@@ -141,8 +140,7 @@ class View
     diffs = []
     first_fingerprint = dom_fingerprint new_doms.first if new_doms.first
     @rendered_contents.each do |content|
-      dom_fingerprint = content[:dom]
-      next removes << content unless dom_fingerprint != first_fingerprint
+      next removes << content unless content[:fingerprint] == first_fingerprint
       diffs << [content, new_doms.first]
       new_doms.shift
       first_fingerprint = dom_fingerprint new_doms.first if new_doms.first
@@ -171,18 +169,19 @@ class View
       styles = {}
       actions = {}
       prepare_html dom, html, styles, actions
-      content_id = rand
-      htmls << "<div id='#{rand}'>#{html}</div>"
+      content_id = random_id
+      htmls << "<div id='#{content_id}'>#{html}</div>"
       actions.each { |id, action| @actions[id] = action }
       new_contents << {
         id: content_id,
-        styles: styles.transform_values { |s| s[:current] },
+        styles: styles.transform_values(&:call),
         action_keys: actions.keys,
-        dom: dom
+        fingerprint: dom_fingerprint(dom)
       }
     end
+    p [:update, diffs.size, removes.size, new_doms.size]
     @rendered_contents = new_contents
-    htmls << "<style>#{style_updates}</style>"
+    htmls << "<style>#{style_updates.join "\n"}</style>" unless style_updates.empty?
     htmls.join("\n")
   end
 
@@ -214,9 +213,17 @@ class View
   def initial_render
     @initial_rendered = true
     html = '<iframe name=iframe style="display:none"></iframe>'.dup
-    prepare_html @dom_tree, html, @styles, @actions
+    styles = {}
+    prepare_html @dom_tree, html, styles, @actions
+    style_list = []
+    styles.each do |id, block|
+      css = block.call
+      @styles[id] = { current: css, block: block }
+      style_list << "##{id}{#{css_to_string block.call}}"
+    end
     @dom_tree = nil
-    html + render_contents_diff
+    style_html = "<style>#{style_list.join "\n"}</style>"
+    html + style_html + render_contents_diff
   end
 
   def extract_style_actions dom, styles, actions
@@ -228,23 +235,20 @@ class View
     extract_style_actions dom[:children], styles, actions
   end
 
+  def random_id
+    'id' + rand(0xffffffffffffffff).to_s(36)
+  end
+
   def prepare_html dom, output, styles, actions
     return dom.each { |d| prepare_html d, output, styles, actions } if dom.is_a? Array
     return output << CGI.escape_html(dom) if dom.is_a? String
     return output.freeze if dom[:type] == :contents
     attributes = dom[:attr].dup
     if dom[:style] || dom[:onclick] || dom[:onsubmit]
-      id = rand.to_s
+      id = random_id
       attributes[:id] = id
     end
-    if dom[:style]
-      style = dom[:style].call
-      styles[id] = {
-        current: style.dup,
-        block: dom[:style]
-      }
-      attributes[:style] = css_to_string style
-    end
+    styles[id] = dom[:style] if dom[:style]
     handler = dom[:onclick] || dom[:onsubmit]
     if handler
       actions[id] = handler
@@ -367,7 +371,6 @@ class Page
   end
 
   def run
-    Thread.new { binding.pry } # TODO remove this
     loop do
       render
       command = @channel.deq

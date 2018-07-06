@@ -121,7 +121,7 @@ class View
     @styles = {}
     @channel = channel
     @initial_rendered = false
-    @contents = []
+    @rendered_contents = []
   end
 
   def render
@@ -130,6 +130,38 @@ class View
   end
 
   def render_contents_diff
+    renderer = DOMRenderer.new allow_contents: false
+    renderer.instance_eval(&block)
+    contents = renderer.dom_tree
+    new_contents = contents.dup
+    removes = []
+    diffs = []
+    first_fingerprint = dom_fingerprint new_contents.first if new_contents.first
+    @rendered_contents.each do |content|
+      dom_fingerprint = content[:dom]
+      next removes << content unless dom_fingerprint != first_fingerprint
+      diffs << [content, new_contents.first]
+      new_contents.shift
+      first_fingerprint = dom_fingerprint new_contents.first if new_contents.first
+    end
+    remove_css = []
+    removes.each { |content| remove_css << "##{content[:id]}{display: none}" }
+    diffs.map {
+
+    }
+  end
+
+  def dom_fingerprint dom
+    case dom
+    when String
+      dom
+    when Hash
+      dom.slice(:name, :attr, :style, :onclick, :submit).merge(
+        children: dom_fingerprint(dom[:children]),
+      ).transform_values { |v| v.is_a?(Proc) ? true : v}
+    when Array
+      dom.map(&method(:dom_fingerprint))
+    end
   end
 
   def render_diff
@@ -146,18 +178,25 @@ class View
 
   def initial_render
     @initial_rendered = true
-    @html = '<iframe name=iframe style="display:none"></iframe>'.dup
-    prepare_html @dom_tree
+    html = '<iframe name=iframe style="display:none"></iframe>'.dup
+    prepare_html @dom_tree, html, @styles, @actions
     @dom_tree = nil
-    output = @html
-    @html = nil
-    output + render_contents_diff
+    html + render_contents_diff
   end
 
-  def prepare_html dom
-    return dom.each { |d| prepare_html d } if dom.is_a? Array
-    return @html << CGI.escape_html(dom) if dom.is_a? String
-    return @html.freeze if dom[:type] == :contents
+  def extract_style_actions dom, styles, actions
+    return dom.each { |d| extract_style_actions d, styes, actions } if dom.is_a? Array
+    return if dom.is_a? String
+    styles << dom[:style] if dom[:style]
+    handler = dom[:onclick] || dom[:onsubmit]
+    actions << handler if handler
+    extract_style_actions dom[:children], styes, actions
+  end
+
+  def prepare_html dom, output, styles, actions
+    return dom.each { |d| prepare_html d, output, styes, actions } if dom.is_a? Array
+    return output << CGI.escape_html(dom) if dom.is_a? String
+    return output.freeze if dom[:type] == :contents
     attributes = dom[:attr].dup
     if dom[:style] || dom[:onclick] || dom[:onsubmit]
       id = rand.to_s
@@ -165,7 +204,7 @@ class View
     end
     if dom[:style]
       style = dom[:style].call
-      @styles[id] = {
+      styles[id] = {
         id: id,
         current: style.dup,
         block: dom[:style]
@@ -174,7 +213,7 @@ class View
     end
     handler = dom[:onclick] || dom[:onsubmit]
     if handler
-      @actions[id] = handler
+      actions[id] = handler
       attributes[:target] = 'iframe'
     end
     if dom[:onclick]
@@ -186,9 +225,9 @@ class View
     attr_string = attributes.map do |key, value|
       %(#{key}="#{CGI.escape value}")
     end
-    @html << "<#{dom[:name]} #{attr_string.join ' '}>"
-    prepare_html dom[:children]
-    @html << "</#{dom[:name]}>" unless @html.frozen?
+    output << "<#{dom[:name]} #{attr_string.join ' '}>"
+    prepare_html dom[:children], output, styes, actions
+    output << "</#{dom[:name]}>" unless output.frozen?
   end
 
   def css_to_string css

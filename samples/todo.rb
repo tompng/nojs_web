@@ -46,6 +46,13 @@ page '/todo', initial_global do |global, local|
     { 'border-color' => color, color: color }
   end
 
+  task_name_css = lambda do |done|
+    {
+      color: done ? 'gray' : 'black',
+      'text-decoration' => done ? 'line-through' : 'none'
+    }
+  end
+
   show_task = lambda do |task|
     case local.show_mode
     when :complete
@@ -101,7 +108,7 @@ page '/todo', initial_global do |global, local|
               ) do
                 span text: '✔︎', style: -> { { display: task.done ? 'block' : 'none' } }
               end
-              div class: 'task-name', text: task.name
+              div class: 'task-name', text: task.name, style: -> { task_name_css.call task.done }
               a class: 'task-delete', onclick: -> { remove_task.call task.id }, text: '×'
             end
           end

@@ -6,6 +6,8 @@ require './samples/sleep'
 require './samples/click'
 require './samples/hover'
 require './draw/draw'
+require './page'
+require './samples/todo'
 require 'puma'
 
 # disable TCP_CORK for linux

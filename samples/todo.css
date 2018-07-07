@@ -1,0 +1,73 @@
+a {
+  text-decoration: none;
+}
+.task {
+  width: 100%; position: relative; height: 60px;
+  border-bottom: 1px solid silver;
+}
+.task-checkbox { left: 10px; top: 10px; border: 1px solid silver; }
+.task-delete { right: 10px; top: 10px; color: #fee; border: none; }
+.task-delete:hover { color: #d00; }
+.task-checkbox, .task-delete {
+  position: absolute;
+  width: 40px; height: 40px;
+  border-radius: 4px;
+  text-decoration: none;
+  font-size: 30px;
+  text-align: center;
+  line-height: 40px;
+}
+.task-name {
+  position: absolute;
+  left: 60px; top: 10px; right: 60px; bottom: 10px;
+  font-size: 30px; line-height: 40px;
+}
+.todoapp {
+  width: 600px;
+  height: 600px;
+  position: relative;
+  background: white;
+  box-shadow: 1px 1px 4px gray;
+}
+.header {
+  position: absolute;
+  left: 0; top: 0; right: 0; height: 60px;
+  border-bottom: 1px solid silver;
+}
+.header input {
+  position: absolute;
+  line-height: 60px;
+  font-size: 40px;
+  left: 0; top: 0; right: 0; bottom: 0;
+  width: 100%;
+  outline: none;
+  padding-left: 60px;
+  border: none;
+  background: #eee;
+}
+.todos {
+  position: absolute;
+  left: 0; top: 60px;
+  right: 0; bottom: 40px;
+  overflow-y: auto;
+  border-bottom: 1px solid silver;
+}
+.footer {
+  position: absolute;
+  line-height: 20px;
+  font-size: 16px;
+  left: 0; right: 0; bottom: 0; height: 40px;
+}
+.items-left {
+  margin: 10px;
+  display: inline-block;
+  width: 200px;
+  color: gray;
+}
+.show-mode-buttons a {
+  margin: 5px 0;
+  padding: 5px 10px;
+  border-radius: 2px;
+  color: gray;
+  border: 1px solid transparent;
+}

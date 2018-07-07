@@ -152,11 +152,13 @@ class View
       content[:action_keys].each { |id| @actions.delete id }
     end
     diffs.map do |content, dom|
-      styles = []
+      style_procs = []
       actions = []
-      extract_style_actions dom, styles, actions
+      extract_style_actions dom, style_procs, actions
+      styles = style_procs.map(&:call)
       content[:styles].to_a.zip styles do |(id, old_style), new_style|
         changed = new_style.to_a - old_style.to_a
+        next if changed.empty?
         style_updates << "##{id}{#{View.css_to_string(changed)}}"
         content[:styles][id] = new_style
       end
@@ -166,15 +168,19 @@ class View
     htmls = []
     new_doms.each do |dom|
       html = ''
-      styles = {}
+      style_procs = {}
       actions = {}
-      prepare_html dom, html, styles, actions
+      prepare_html dom, html, style_procs, actions
       content_id = random_id
       htmls << "<div id='#{content_id}'>#{html}</div>"
       actions.each { |id, action| @actions[id] = action }
+      styles = style_procs.transform_values(&:call)
+      styles.each do |id, style|
+        style_updates << "##{id}{#{View.css_to_string(style)}}"
+      end
       new_contents << {
         id: content_id,
-        styles: styles.transform_values(&:call),
+        styles: styles,
         action_keys: actions.keys,
         fingerprint: dom_fingerprint(dom)
       }
@@ -260,7 +266,7 @@ class View
       attributes[:method] = :post
     end
     attr_string = attributes.map do |key, value|
-      %(#{key}="#{CGI.escape_html value}")
+      %(#{key}="#{CGI.escape_html value.to_s}")
     end
     output << "<#{dom[:name]} #{attr_string.join ' '}>"
     prepare_html dom[:children], output, styles, actions

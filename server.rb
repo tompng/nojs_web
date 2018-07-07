@@ -7,6 +7,7 @@ require './samples/click'
 require './samples/hover'
 require './draw/draw'
 require './page'
+require './samples/vdomtest'
 require './samples/todo'
 require 'puma'
 

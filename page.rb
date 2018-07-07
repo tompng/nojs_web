@@ -290,7 +290,7 @@ class DOMRenderer
     raise unless @allow_contents
     raise unless block_given?
     @contents_block = block
-    { type: :contents, block: block }
+    @current << { type: :contents, block: block }
   end
 
   def text(text)

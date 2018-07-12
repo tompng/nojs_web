@@ -34,11 +34,12 @@ get '/' do
       a:active{background:#ddd}
     </style>
     <h1>デモ</h1>
-    <a id=drawdemo href='/draw'>お絵かきアプリのデモ</a>
+      <a id=drawdemo href='/draw'>お絵かき</a>
+      <a id=drawdemo href='/todo'>TodoList</a>
     <hr>
     <h2>その他のデモ</h2>
   )
-  samples = %w(clock1 clock2 click1 click2 countdown hover)
+  samples = %w(clock1 clock2 click1 click2 countdown hover fwtest)
   samples.each do |name|
     out << "<a href='/#{name}'>#{name}</a>"
   end

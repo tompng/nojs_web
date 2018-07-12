@@ -1,4 +1,4 @@
-page '/vdomtest', { color: 'silver' } do |global, local|
+page '/fwtest', { color: 'silver' } do |global, local|
   local.count = 4
   decrese = -> { local.count -= 1 if local.count > 0 }
   increse = -> { local.count += 1 }

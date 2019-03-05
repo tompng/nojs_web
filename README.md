@@ -1,5 +1,5 @@
 # nojs_web
-webpage without javascript http://13.112.223.95/
+webpage without javascript http://nojs-web.com/
 
 ```
 $ bundle install
